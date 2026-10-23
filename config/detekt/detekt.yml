@@ -1,0 +1,54 @@
+build:
+  maxIssues: 0
+
+config:
+  validation: true
+
+complexity:
+  LongMethod:
+    active: true
+    threshold: 90
+  LongParameterList:
+    active: true
+    functionThreshold: 16
+    constructorThreshold: 16
+  TooManyFunctions:
+    active: false
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 22
+  NestedBlockDepth:
+    active: true
+    threshold: 6
+
+style:
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+  WildcardImport:
+    active: true
+  ReturnCount:
+    active: false
+  ThrowsCount:
+    active: false
+  UnusedPrivateMember:
+    active: true
+  ForbiddenComment:
+    active: false
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated:
+      - Composable
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: false
+
+empty-blocks:
+  EmptyFunctionBlock:
+    active: false
