@@ -3,27 +3,26 @@ package com.marcopt74.damelume.system.notify
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.marcopt74.damelume.di.IoDispatcher
+import com.marcopt74.damelume.system.launchReceiverWork
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineDispatcher
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class NotificationActionReceiver : BroadcastReceiver() {
     @Inject lateinit var handler: NotificationActionHandler
 
+    @Inject @IoDispatcher
+    lateinit var ioDispatcher: CoroutineDispatcher
+
     override fun onReceive(
         context: Context,
         intent: Intent,
     ) {
         val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                handler.handle(intent.action)
-            } finally {
-                pending.finish()
-            }
+        launchReceiverWork(ioDispatcher, pending::finish) {
+            handler.handle(intent.action)
         }
     }
 

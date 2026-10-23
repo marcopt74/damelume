@@ -20,18 +20,66 @@ import com.marcopt74.damelume.domain.model.Mode
 
 val EaseSmoothOut = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
 
-private val Fraunces =
-    FontFamily(
-        Font(R.font.fraunces_medium, FontWeight.Medium),
-        Font(R.font.fraunces_semibold, FontWeight.SemiBold),
-    )
+object LumeFonts {
+    val Fraunces =
+        FontFamily(
+            Font(R.font.fraunces_medium, FontWeight.Medium),
+            Font(R.font.fraunces_semibold, FontWeight.SemiBold),
+        )
 
-private val Outfit =
-    FontFamily(
-        Font(R.font.outfit_regular, FontWeight.Normal),
-        Font(R.font.outfit_medium, FontWeight.Medium),
-        Font(R.font.outfit_semibold, FontWeight.SemiBold),
-    )
+    val Outfit =
+        FontFamily(
+            Font(R.font.outfit_regular, FontWeight.Normal),
+            Font(R.font.outfit_medium, FontWeight.Medium),
+            Font(R.font.outfit_semibold, FontWeight.SemiBold),
+        )
+}
+
+object LumeTypography {
+    val title =
+        TextStyle(
+            fontFamily = LumeFonts.Fraunces,
+            fontWeight = FontWeight.Medium,
+            fontSize = 30.sp,
+            lineHeight = 36.sp,
+            letterSpacing = (-0.75).sp,
+        )
+
+    // The reference clock is Outfit (`font-sans`), not Fraunces. Fraunces is the word "Lume".
+    val timer =
+        TextStyle(
+            fontFamily = LumeFonts.Outfit,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 52.sp,
+            lineHeight = 52.sp,
+            letterSpacing = (-1.3).sp,
+            fontFeatureSettings = "tnum, lnum",
+        )
+
+    val body =
+        TextStyle(
+            fontFamily = LumeFonts.Outfit,
+            fontWeight = FontWeight.Normal,
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+        )
+
+    val bodySmall =
+        TextStyle(
+            fontFamily = LumeFonts.Outfit,
+            fontWeight = FontWeight.Normal,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+        )
+
+    val label =
+        TextStyle(
+            fontFamily = LumeFonts.Outfit,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+        )
+}
 
 @Immutable
 data class ModeColors(
@@ -95,16 +143,15 @@ fun LumeTheme(
             colorScheme = scheme,
             typography =
                 MaterialTheme.typography.copy(
-                    bodyLarge = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.Normal, fontSize = 16.sp),
-                    bodyMedium = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.Normal, fontSize = 14.sp),
-                    labelLarge = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.Medium, fontSize = 14.sp),
-                    headlineMedium =
-                        TextStyle(
-                            fontFamily = Fraunces,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 30.sp,
-                            letterSpacing = (-0.4).sp,
-                        ),
+                    displayLarge = LumeTypography.timer,
+                    headlineMedium = LumeTypography.title,
+                    titleLarge = LumeTypography.title,
+                    bodyLarge = LumeTypography.body,
+                    bodyMedium = LumeTypography.bodySmall,
+                    bodySmall = LumeTypography.bodySmall,
+                    labelLarge = LumeTypography.label,
+                    labelMedium = LumeTypography.label,
+                    labelSmall = LumeTypography.bodySmall,
                 ),
             content = content,
         )

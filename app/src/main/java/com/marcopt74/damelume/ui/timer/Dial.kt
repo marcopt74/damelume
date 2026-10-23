@@ -20,9 +20,39 @@ import kotlin.math.min
 import kotlin.math.sin
 
 private const val BOX = 240f
-private const val CENTER = 120f
+internal const val DIAL_CENTER = 120f
 private const val RING = 86f
 private const val TRAIL_DEGREES = 58f
+
+internal data class DialTick(
+    val major: Boolean,
+    val x1: Float,
+    val y1: Float,
+    val x2: Float,
+    val y2: Float,
+)
+
+internal object DialGeometry {
+    val ticks: List<DialTick> =
+        List(60) { index ->
+            val major = index % 5 == 0
+            val angle = index / 60.0 * (PI * 2) - PI / 2
+            val inner = if (major) 100.0 else 107.5
+            val outer = 114.0
+            DialTick(
+                major = major,
+                x1 = (DIAL_CENTER + kotlin.math.cos(angle) * inner).toFloat(),
+                y1 = (DIAL_CENTER + kotlin.math.sin(angle) * inner).toFloat(),
+                x2 = (DIAL_CENTER + kotlin.math.cos(angle) * outer).toFloat(),
+                y2 = (DIAL_CENTER + kotlin.math.sin(angle) * outer).toFloat(),
+            )
+        }
+
+    val ringStroke = Stroke(width = 5.5f, cap = StrokeCap.Round)
+    val trackStroke = Stroke(width = 1f)
+    val innerStroke = Stroke(width = 0.6f)
+    val trailStroke = Stroke(width = 8f, cap = StrokeCap.Round)
+}
 
 @Composable
 fun Dial(
@@ -93,32 +123,24 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTicks(
     accent: Color,
     fg: Color,
 ) {
-    repeat(60) { index ->
-        val major = index % 5 == 0
-        val angle = index / 60f * (PI * 2) - PI / 2
-        val inner = if (major) 100f else 107.5f
-        val outer = 114f
-        val midX = CENTER + cos(angle).toFloat() * ((inner + outer) / 2f)
-        val midY = CENTER + sin(angle).toFloat() * ((inner + outer) / 2f)
+    DialGeometry.ticks.forEachIndexed { index, tick ->
+        val midX = (tick.x1 + tick.x2) / 2f
+        val midY = (tick.y1 + tick.y2) / 2f
         val magnify = if (running) tickMagnify(circularDistance(index.toFloat(), handTurns)) else 0f
-        val scale = 1f + magnify * (if (major) 0.42f else 1.15f)
-        val x1 = midX + (CENTER + cos(angle).toFloat() * inner - midX) * scale
-        val y1 = midY + (CENTER + sin(angle).toFloat() * inner - midY) * scale
-        val x2 = midX + (CENTER + cos(angle).toFloat() * outer - midX) * scale
-        val y2 = midY + (CENTER + sin(angle).toFloat() * outer - midY) * scale
+        val scale = 1f + magnify * (if (tick.major) 0.42f else 1.15f)
         val behind = running && positiveDelta(secondTurn, index / 60f) in 0f..(TRAIL_DEGREES / 360f)
         val color =
             when {
                 magnify > 0.08f || behind -> accent
                 index / 60f < elapsed -> fg.copy(alpha = 0.15f)
-                major -> fg.copy(alpha = 0.45f)
+                tick.major -> fg.copy(alpha = 0.45f)
                 else -> fg.copy(alpha = 0.20f)
             }
         drawLine(
             color = color,
-            start = Offset(x1, y1),
-            end = Offset(x2, y2),
-            strokeWidth = (if (major) 1.5f else 0.9f) + magnify * 2.1f,
+            start = Offset(midX + (tick.x1 - midX) * scale, midY + (tick.y1 - midY) * scale),
+            end = Offset(midX + (tick.x2 - midX) * scale, midY + (tick.y2 - midY) * scale),
+            strokeWidth = (if (tick.major) 1.5f else 0.9f) + magnify * 2.1f,
             cap = StrokeCap.Round,
         )
     }
@@ -133,12 +155,22 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRingsAndHand(
     fg: Color,
     bg: Color,
 ) {
-    drawCircle(color = fg.copy(alpha = 0.12f), radius = 70f, center = Offset(CENTER, CENTER), style = Stroke(width = 0.6f))
-    drawCircle(color = fg.copy(alpha = 0.12f), radius = RING, center = Offset(CENTER, CENTER), style = Stroke(width = 1f))
+    drawCircle(
+        color = fg.copy(alpha = 0.12f),
+        radius = 70f,
+        center = Offset(DIAL_CENTER, DIAL_CENTER),
+        style = DialGeometry.innerStroke,
+    )
+    drawCircle(
+        color = fg.copy(alpha = 0.12f),
+        radius = RING,
+        center = Offset(DIAL_CENTER, DIAL_CENTER),
+        style = DialGeometry.trackStroke,
+    )
     val arcSize =
         androidx.compose.ui.geometry
             .Size(RING * 2, RING * 2)
-    val arcTopLeft = Offset(CENTER - RING, CENTER - RING)
+    val arcTopLeft = Offset(DIAL_CENTER - RING, DIAL_CENTER - RING)
     if (remainingFraction > 0f) {
         drawArc(
             color = accent,
@@ -147,7 +179,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRingsAndHand(
             useCenter = false,
             topLeft = arcTopLeft,
             size = arcSize,
-            style = Stroke(width = 5.5f, cap = StrokeCap.Round),
+            style = DialGeometry.ringStroke,
         )
     }
     val handAngle = -PI / 2 + secondTurn * PI * 2
@@ -159,17 +191,17 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRingsAndHand(
             useCenter = false,
             topLeft = arcTopLeft,
             size = arcSize,
-            style = Stroke(width = 8f, cap = StrokeCap.Round),
+            style = DialGeometry.trailStroke,
         )
     }
     drawLine(
         color = accent.copy(alpha = if (running) 1f else 0.45f),
-        start = Offset(CENTER + cos(handAngle).toFloat() * 72f, CENTER + sin(handAngle).toFloat() * 72f),
-        end = Offset(CENTER + cos(handAngle).toFloat() * 116f, CENTER + sin(handAngle).toFloat() * 116f),
+        start = Offset(DIAL_CENTER + cos(handAngle).toFloat() * 72f, DIAL_CENTER + sin(handAngle).toFloat() * 72f),
+        end = Offset(DIAL_CENTER + cos(handAngle).toFloat() * 116f, DIAL_CENTER + sin(handAngle).toFloat() * 116f),
         strokeWidth = if (running) 2.6f else 1.6f,
         cap = StrokeCap.Round,
     )
-    val knob = Offset(CENTER + cos(handAngle).toFloat() * RING, CENTER + sin(handAngle).toFloat() * RING)
+    val knob = Offset(DIAL_CENTER + cos(handAngle).toFloat() * RING, DIAL_CENTER + sin(handAngle).toFloat() * RING)
     drawCircle(color = accent, radius = if (running) 8f else 4.5f, center = knob)
     drawCircle(color = bg, radius = if (running) 4.2f else 2.4f, center = knob)
     drawCircle(color = accent, radius = if (running) 2.1f else 1.2f, center = knob)

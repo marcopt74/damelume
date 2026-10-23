@@ -48,6 +48,9 @@
     <string name="banner_notifications_off">Notifications are off: you will not see the time or the end alert with the screen locked.</string>
     <string name="open_settings">Open settings</string>
     <string name="banner_exact_alarm">Alerts may be delayed. Allow exact alarms</string>
+    <string name="banner_exact_alarm_action">Allow exact alarms</string>
+    <string name="dismiss_symbol">×</string>
+    <string name="stepper_value">%1$d</string>
     <string name="notif_rationale_title">Notifications</string>
     <string name="notif_rationale_body">Lume uses a notification to show the countdown and to alert you when a phase ends, including with the screen off.</string>
     <string name="notif_rationale_allow">Allow</string>

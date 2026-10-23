@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.marcopt74.damelume.data.db.CompletedSessionDao
 import com.marcopt74.damelume.data.db.LumeDatabase
+import com.marcopt74.damelume.data.db.LumeMigrations
 import com.marcopt74.damelume.domain.Clock
 import com.marcopt74.damelume.domain.SystemClock
 import com.marcopt74.damelume.system.alarm.AlarmScheduler
@@ -27,6 +28,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import javax.inject.Singleton
 
 private val Context.lumeDataStore: DataStore<Preferences> by preferencesDataStore(name = "lume_prefs")
@@ -48,7 +53,23 @@ object DataModule {
     @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context,
-    ): LumeDatabase = Room.databaseBuilder(context, LumeDatabase::class.java, "lume.db").build()
+    ): LumeDatabase =
+        Room
+            .databaseBuilder(context, LumeDatabase::class.java, "lume.db")
+            .addMigrations(LumeMigrations.MIGRATION_1_2)
+            .build()
+
+    @Provides
+    @Singleton
+    @IoDispatcher
+    fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
+
+    @Provides
+    @Singleton
+    @ApplicationScope
+    fun provideApplicationScope(
+        @IoDispatcher dispatcher: CoroutineDispatcher,
+    ): CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher)
 
     @Provides
     fun provideDao(database: LumeDatabase): CompletedSessionDao = database.completedSessionDao()

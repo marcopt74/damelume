@@ -39,31 +39,36 @@ fun SessionCounter(
         modifier = modifier,
         horizontalAlignment = Alignment.End,
     ) {
-        Text(
-            text = count.toString(),
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 22.sp,
-            color = Color(0xFF1C1B19),
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.semantics { contentDescription = countDescription },
-        )
-        Text(
-            text = countLabel,
-            fontSize = 13.sp,
-            color = Color(0xFF6D6962),
-        )
+        ) {
+            Text(
+                text = count.toString(),
+                fontWeight = FontWeight.Medium,
+                fontSize = 18.sp,
+                color = Color(0xFF1C1B19),
+            )
+            Text(
+                text = countLabel,
+                fontSize = 12.sp,
+                color = Color(0xFF6D6962),
+            )
+        }
         Row(
             modifier =
                 Modifier
                     .padding(top = 6.dp)
                     .semantics { contentDescription = cycleDescription },
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             repeat(4) { index ->
                 val filled = index < cycleWorkCount
                 Box(
                     modifier =
                         Modifier
-                            .size(8.dp)
+                            .size(6.dp)
                             .background(
                                 color = if (filled) accent else Color(0xFF1C1B19).copy(alpha = 0.15f),
                                 shape = CircleShape,
@@ -76,7 +81,7 @@ fun SessionCounter(
             enabled = resetEnabled,
             modifier = Modifier.minimumInteractiveComponentSize().alpha(if (resetEnabled) 1f else 0.4f),
         ) {
-            Text(text = resetLabel, color = Color(0xFF9A4036))
+            Text(text = resetLabel, color = Color(0xFF6D6962), fontSize = 12.sp)
         }
     }
 }

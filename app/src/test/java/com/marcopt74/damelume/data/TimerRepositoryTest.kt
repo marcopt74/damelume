@@ -17,6 +17,7 @@ import com.marcopt74.damelume.testutil.MutableClock
 import com.marcopt74.damelume.testutil.RecordingAlarmScheduler
 import com.marcopt74.damelume.testutil.RecordingChime
 import com.marcopt74.damelume.testutil.RecordingNotifier
+import com.marcopt74.damelume.testutil.quietAppScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -174,6 +175,124 @@ class TimerRepositoryTest {
             assertThat(notifier.cancelCount).isAtLeast(1)
         }
 
+    @Test
+    fun rescheduleRunningAlarm_rewritesTheSameEndsAt_andSkipsIdle() =
+        runTest {
+            repository.dispatch(TimerAction.Start)
+            val endsAt = preferences.current().timer.endsAtEpochMs
+            assertThat(endsAt).isNotNull()
+            alarm.scheduled.clear()
+            alarm.cancelled.clear()
+
+            repository.rescheduleRunningAlarm()
+
+            assertThat(alarm.cancelled).containsExactly(endsAt)
+            assertThat(alarm.scheduled).containsExactly(endsAt)
+
+            repository.dispatch(TimerAction.Pause)
+            alarm.scheduled.clear()
+            alarm.cancelled.clear()
+            repository.rescheduleRunningAlarm()
+
+            assertThat(alarm.scheduled).isEmpty()
+        }
+
+    @Test
+    fun failedInsert_doesNotAdvanceTheTimer_andRetryDoesNotDuplicate() =
+        runTest {
+            val flaky = FlakyDao(database.completedSessionDao())
+            val flakyRepository =
+                TimerRepository(
+                    preferences = preferences,
+                    dao = flaky,
+                    clock = clock,
+                    alarmScheduler = alarm,
+                    notifier = notifier,
+                    chimePlayer = chime,
+                    foregroundTracker = foreground,
+                    localeApplicator = FakeLocaleApplicator(),
+                    scope = quietAppScope(),
+                )
+            flakyRepository.dispatch(TimerAction.Start)
+            val endsAt = preferences.current().timer.endsAtEpochMs!!
+            clock.now = endsAt
+            flaky.failInserts = 1
+
+            flakyRepository.dispatch(TimerAction.Complete(expectedEndsAt = endsAt))
+
+            assertThat(preferences.current().timer.isRunning).isTrue()
+            assertThat(preferences.current().timer.mode).isEqualTo(Mode.WORK)
+            assertThat(database.completedSessionDao().countAll()).isEqualTo(0)
+
+            flakyRepository.dispatch(TimerAction.Complete(expectedEndsAt = endsAt))
+
+            assertThat(preferences.current().timer.isRunning).isFalse()
+            assertThat(preferences.current().timer.mode).isEqualTo(Mode.BREAK)
+            assertThat(database.completedSessionDao().countAll()).isEqualTo(1)
+            val stored = database.completedSessionDao().all().single()
+            database.completedSessionDao().insert(stored.copy(id = 0))
+            assertThat(database.completedSessionDao().countAll()).isEqualTo(1)
+        }
+
+    @Test
+    fun reconcileYesterdayWork_countsAsToday() =
+        runTest {
+            val zone = clock.zone()
+            val endsAt =
+                java.time.ZonedDateTime
+                    .of(2026, 10, 22, 23, 0, 0, 0, zone)
+                    .toInstant()
+                    .toEpochMilli()
+            val morning =
+                java.time.ZonedDateTime
+                    .of(2026, 10, 23, 9, 0, 0, 0, zone)
+                    .toInstant()
+                    .toEpochMilli()
+            preferences.writeTimer(
+                TimerState(mode = Mode.WORK, isRunning = true, endsAtEpochMs = endsAt, remainingMs = 1_000, cycleWorkCount = 0),
+            )
+            clock.now = morning
+            repository.refreshToday()
+
+            repository.reconcileOnLaunch()
+
+            val rows = database.completedSessionDao().all()
+            assertThat(rows).hasSize(1)
+            assertThat(rows.single().endedAtEpochMs).isEqualTo(endsAt)
+            assertThat(rows.single().localDate).isEqualTo("2026-10-23")
+            assertThat(rows.single().mode).isEqualTo("WORK")
+            assertThat(repository.todayCount.first()).isEqualTo(1)
+        }
+
+    @Test
+    fun refreshToday_rereadsTheDateWithoutAPreferenceWrite() =
+        runTest {
+            val zone = clock.zone()
+            val noon =
+                java.time.ZonedDateTime
+                    .of(2026, 10, 22, 12, 0, 0, 0, zone)
+                    .toInstant()
+                    .toEpochMilli()
+            clock.now = noon
+            repository.refreshToday()
+            database.completedSessionDao().insert(
+                CompletedSessionEntity(
+                    mode = "WORK",
+                    plannedMs = 25 * 60_000L,
+                    endedAtEpochMs = noon,
+                    localDate = clock.today().toString(),
+                    lateCompletion = false,
+                ),
+            )
+            assertThat(repository.todayCount.first()).isEqualTo(1)
+
+            clock.now = noon + 24 * 60 * 60 * 1000
+            assertThat(repository.todayCount.first()).isEqualTo(1)
+
+            repository.refreshToday()
+            assertThat(repository.todayCount.first()).isEqualTo(0)
+        }
+
     private fun repository(alarm: RecordingAlarmScheduler = this.alarm): TimerRepository =
         TimerRepository(
             preferences = preferences,
@@ -184,5 +303,29 @@ class TimerRepositoryTest {
             chimePlayer = chime,
             foregroundTracker = foreground,
             localeApplicator = FakeLocaleApplicator(),
+            scope = quietAppScope(),
         )
+}
+
+private class FlakyDao(
+    private val delegate: com.marcopt74.damelume.data.db.CompletedSessionDao,
+) : com.marcopt74.damelume.data.db.CompletedSessionDao {
+    var failInserts: Int = 0
+
+    override suspend fun insert(entity: com.marcopt74.damelume.data.db.CompletedSessionEntity): Long {
+        if (failInserts > 0) {
+            failInserts -= 1
+            error("disk full")
+        }
+        return delegate.insert(entity)
+    }
+
+    override fun todayCount(
+        today: String,
+        sessionsResetAt: Long,
+    ) = delegate.todayCount(today, sessionsResetAt)
+
+    override suspend fun countAll(): Int = delegate.countAll()
+
+    override suspend fun all() = delegate.all()
 }

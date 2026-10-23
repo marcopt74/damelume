@@ -9,9 +9,14 @@ import com.marcopt74.damelume.system.locale.LocaleApplicator
 import com.marcopt74.damelume.system.notify.TimerNotifier
 import com.marcopt74.damelume.system.sound.ChimePlayer
 import com.marcopt74.damelume.system.sound.ForegroundTracker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.time.ZoneId
+
+fun quietAppScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
 class MutableClock(
     var now: Long = 1_700_000_000_000L,

@@ -7,7 +7,10 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "completed_session",
-    indices = [Index(value = ["local_date"])],
+    indices = [
+        Index(value = ["local_date"]),
+        Index(value = ["mode", "ended_at_epoch_ms"], unique = true),
+    ],
 )
 data class CompletedSessionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

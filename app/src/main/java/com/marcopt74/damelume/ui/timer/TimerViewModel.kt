@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -33,21 +35,26 @@ class TimerViewModel
     ) : ViewModel() {
         private val nowMs = MutableStateFlow(clock.nowMillis())
         private val permissionTick = MutableStateFlow(0)
+        private val notificationRationale = MutableStateFlow(false)
         private var ticker: Job? = null
+
+        internal val isTicking: Boolean
+            get() = ticker?.isActive == true
 
         val uiState: StateFlow<TimerUiState> =
             combine(
                 repository.snapshot,
                 nowMs,
                 permissionTick,
-            ) { snapshot, now, _ ->
+                notificationRationale,
+            ) { snapshot, now, _, rationale ->
                 val persisted = snapshot.persisted
                 val notification =
                     NotificationPermissionState(
                         sdkInt = permissions.sdkInt(),
                         granted = permissions.notificationsGranted(),
                         asked = persisted.notifPermissionAsked,
-                        rationale = permissions.shouldShowNotificationRationale(),
+                        rationale = rationale,
                         dismissedMarker = persisted.notifBannerDismissedMarker,
                         endsAtEpochMs = persisted.timer.endsAtEpochMs,
                     )
@@ -71,23 +78,35 @@ class TimerViewModel
                 ExactAlarmSignals.updates.collect { permissionTick.value = permissionTick.value + 1 }
             }
             viewModelScope.launch {
-                foregroundTracker.isForeground.collect { inForeground ->
-                    ticker?.cancel()
-                    if (inForeground) {
-                        ticker = viewModelScope.launch { runTicker() }
+                combine(
+                    foregroundTracker.isForeground,
+                    repository.persisted.map { it.timer.isRunning },
+                ) { foreground, running -> foreground && running }
+                    .distinctUntilChanged()
+                    .collect { shouldTick ->
+                        ticker?.cancel()
+                        ticker = null
+                        if (shouldTick) {
+                            ticker = viewModelScope.launch { runTicker() }
+                        }
                     }
-                }
             }
         }
 
-        fun onResume() {
+        fun onResume(showNotificationRationale: Boolean) {
+            notificationRationale.value = showNotificationRationale
             permissionTick.value = permissionTick.value + 1
             nowMs.value = clock.nowMillis()
+            viewModelScope.launch {
+                repository.refreshToday()
+                repository.rescheduleRunningAlarm()
+            }
         }
 
-        fun onFrame(frameNowMs: Long) {
-            nowMs.value = frameNowMs
-            maybeComplete(frameNowMs)
+        fun onFrame() {
+            val now = clock.nowMillis()
+            nowMs.value = now
+            maybeComplete(now)
         }
 
         fun onAction(action: TimerAction) {

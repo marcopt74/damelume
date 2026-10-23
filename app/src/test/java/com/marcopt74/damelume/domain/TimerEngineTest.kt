@@ -201,8 +201,8 @@ class TimerEngineTest {
                 TimerAction.Reconcile,
                 now = now,
             )
-        assertThat(result.session!!.localDate).isEqualTo(LocalDate.of(2026, 10, 22))
-        assertThat(result.session!!.localDate).isNotEqualTo(LocalDate.of(2026, 10, 23))
+        assertThat(result.session!!.endedAtEpochMs).isEqualTo(endsAt)
+        assertThat(result.session!!.localDate).isEqualTo(LocalDate.of(2026, 10, 23))
         assertThat(result.state.cycleWorkCount).isEqualTo(3)
         assertThat(result.state.mode).isEqualTo(Mode.BREAK)
         assertThat(result.playChime).isFalse()
@@ -313,6 +313,15 @@ class TimerEngineTest {
         assertThat(result.state.cycleWorkCount).isEqualTo(0)
         assertThat(result.state.mode).isEqualTo(Mode.BREAK)
         assertThat(result.state.isRunning).isTrue()
+    }
+
+    @Test
+    fun completeFromAlarm_keepsTheEndedAtDate() {
+        val endsAt = epoch(2026, 10, 22, 23, 0)
+        val now = epoch(2026, 10, 23, 0, 1)
+        val result = reduce(runningWork(endsAt = endsAt, cycle = 0), TimerAction.Complete(expectedEndsAt = endsAt), now = now)
+        assertThat(result.session!!.endedAtEpochMs).isEqualTo(endsAt)
+        assertThat(result.session!!.localDate).isEqualTo(LocalDate.of(2026, 10, 22))
     }
 
     @Test
