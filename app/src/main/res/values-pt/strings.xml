@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">Lume</string>
+    <string name="tagline">Uma coisa de cada vez</string>
+    <string name="language">Idioma</string>
+    <string name="sound_off">Desligar som ao concluir</string>
+    <string name="sound_on">Ligar som ao concluir</string>
+    <string name="reset_sessions">Repor sessões</string>
+    <string name="start">Iniciar</string>
+    <string name="pause">Pausar</string>
+    <string name="resume">Continuar</string>
+    <string name="reset">Reiniciar</string>
+    <string name="skip_break">Saltar pausa</string>
+    <string name="work">Trabalho</string>
+    <string name="break_label">Pausa</string>
+    <string name="minutes">min</string>
+    <string name="working">A trabalhar</string>
+    <string name="paused">Pausado</string>
+    <string name="resting">A descansar</string>
+    <string name="break_paused">Pausa interrompida</string>
+    <string name="remaining">%1$s, %2$s restantes</string>
+    <string name="decrease_work">Diminuir trabalho</string>
+    <string name="increase_work">Aumentar trabalho</string>
+    <string name="decrease_break">Diminuir pausa</string>
+    <string name="increase_break">Aumentar pausa</string>
+    <string name="window_title">%1$s · %2$s — Lume</string>
+    <string name="locale_pt">PT</string>
+    <string name="locale_en">EN</string>
+    <string name="dismiss">Fechar</string>
+
+    <!-- new, not in reference -->
+    <string name="long_break">Pausa longa</string>
+    <string name="long_resting">Em pausa longa</string>
+    <string name="long_break_paused">Pausa longa interrompida</string>
+    <string name="decrease_long_break">Diminuir pausa longa</string>
+    <string name="increase_long_break">Aumentar pausa longa</string>
+    <string name="cycle_progress_cd">%1$d de 4 sessões no ciclo</string>
+    <string name="notif_work_done_title">Trabalho concluído</string>
+    <string name="notif_break_done_title">Pausa concluída</string>
+    <string name="notif_long_break_done_title">Pausa longa concluída</string>
+    <string name="notif_break_next">Hora da pausa · %1$d min</string>
+    <string name="notif_long_break_next">Hora da pausa longa · %1$d min</string>
+    <string name="notif_work_next">Pronto para trabalhar · %1$d min</string>
+    <string name="notif_paused_long_break">Pausa longa interrompida · %1$s</string>
+    <string name="channel_timer_running">Timer em curso</string>
+    <string name="channel_session_complete">Fim de sessão</string>
+    <string name="channel_session_complete_silent">Fim de sessão (silencioso)</string>
+    <string name="banner_notifications_off">Notificações desligadas: não vais ver o tempo nem o aviso de fim com o ecrã bloqueado.</string>
+    <string name="open_settings">Abrir definições</string>
+    <string name="banner_exact_alarm">Os avisos podem atrasar. Permitir alarmes exactos</string>
+    <string name="notif_rationale_title">Notificações</string>
+    <string name="notif_rationale_body">O Lume usa uma notificação para mostrar a contagem e avisar quando uma fase termina, mesmo com o ecrã desligado.</string>
+    <string name="notif_rationale_allow">Permitir</string>
+
+    <plurals name="session_count">
+        <item quantity="one">%d sessão</item>
+        <item quantity="many">%d sessões</item>
+        <item quantity="other">%d sessões</item>
+    </plurals>
+    <plurals name="session_word" tools:ignore="ImpliedQuantity">
+        <item quantity="one">sessão</item>
+        <item quantity="many">sessões</item>
+        <item quantity="other">sessões</item>
+    </plurals>
+</resources>
