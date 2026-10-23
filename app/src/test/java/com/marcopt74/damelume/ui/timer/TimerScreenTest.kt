@@ -5,12 +5,17 @@ import android.content.res.Configuration
 import android.os.LocaleList
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.result.ActivityResultRegistry
+import androidx.activity.result.ActivityResultRegistryOwner
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
@@ -23,12 +28,14 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
-import androidx.test.core.app.ActivityScenario
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.font.FontFamily
+import androidx.core.app.ActivityOptionsCompat
 import com.google.common.truth.Truth.assertThat
 import com.marcopt74.damelume.R
 import com.marcopt74.damelume.domain.model.Mode
 import com.marcopt74.damelume.domain.model.TimerAction
-import com.marcopt74.damelume.testing.TimerTestActivity
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,8 +54,7 @@ class TimerScreenTest {
     fun initialState_showsDefaults() {
         show(TimerUiState(), "pt-PT")
         val pt = context("pt-PT")
-        compose.onNodeWithText("25:00").assertIsDisplayed()
-        compose.onNodeWithText(pt.getString(R.string.work).uppercase()).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Trabalho, 25:00 restantes").assertIsDisplayed()
         compose.onNodeWithText(pt.getString(R.string.start)).assertIsDisplayed()
         compose.onNodeWithText("0").assertIsDisplayed()
         compose
@@ -56,9 +62,12 @@ class TimerScreenTest {
             .assertIsDisplayed()
         compose.onNodeWithText(pt.getString(R.string.reset_sessions)).assertIsNotEnabled()
         compose.onNode(hasContentDescription(pt.getString(R.string.sound_off))).assertIsOn()
-        compose.onNodeWithText("25 min").assertIsDisplayed()
-        compose.onNodeWithText("5 min").assertIsDisplayed()
-        compose.onNodeWithText("15 min").assertIsDisplayed()
+        compose.onNodeWithText("25").assertIsDisplayed()
+        compose.onNodeWithText("5").assertIsDisplayed()
+        compose.onNodeWithText("15").assertIsDisplayed()
+        assertThat(
+            compose.onAllNodes(hasText(pt.getString(R.string.minutes))).fetchSemanticsNodes().size,
+        ).isEqualTo(3)
         assertAbsent(pt.getString(R.string.skip_break))
     }
 
@@ -166,19 +175,86 @@ class TimerScreenTest {
     }
 
     @Test
-    fun stateSurvivesRecreation() {
-        val scenario = ActivityScenario.launch(TimerTestActivity::class.java)
-        scenario.onActivity { activity ->
-            activity.model.onAction(TimerAction.Start)
-            assertThat(activity.model.state.isRunning).isTrue()
+    fun notificationBanner_staysHiddenUntilThePermissionContractReturnsDenied() {
+        val registry = HoldRegistry()
+        val owner =
+            object : ActivityResultRegistryOwner {
+                override val activityResultRegistry: ActivityResultRegistry = registry
+            }
+        val state = mutableStateOf(TimerUiState(requestNotificationOnStart = true))
+        val actions = mutableListOf<TimerAction>()
+        compose.setContent {
+            CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
+                TimerContent(
+                    state = state.value,
+                    reducedMotion = true,
+                    onAction = { action ->
+                        actions += action
+                        if (action == TimerAction.MarkNotificationAsked) {
+                            state.value =
+                                state.value.copy(
+                                    requestNotificationOnStart = false,
+                                    showNotificationBanner = true,
+                                )
+                        }
+                    },
+                    onFrame = {},
+                )
+            }
         }
-        scenario.recreate()
-        scenario.onActivity { activity ->
-            assertThat(activity.model.state.isRunning).isTrue()
-            assertThat(activity.model.state.primary).isEqualTo(PrimaryControl.PAUSE)
-            assertThat(activity.model.state.status).isEqualTo(TimerStatus.WORKING)
-        }
-        scenario.close()
+        compose.onNodeWithText("Start").performClick()
+        compose.onNodeWithText("Start").performClick()
+        assertThat(actions.filterIsInstance<TimerAction.Start>()).isNotEmpty()
+        assertThat(actions.filterIsInstance<TimerAction.MarkNotificationAsked>()).isEmpty()
+        assertAbsent("Notifications are off: you will not see the time or the end alert with the screen locked.")
+        assertThat(registry.codes).hasSize(1)
+
+        registry.dispatchResult(registry.codes.single(), false)
+        compose.waitForIdle()
+
+        assertThat(actions.filterIsInstance<TimerAction.MarkNotificationAsked>()).hasSize(1)
+        compose
+            .onNodeWithText("Notifications are off: you will not see the time or the end alert with the screen locked.")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun runningWindowTitle_usesTheStringResource() {
+        show(
+            TimerUiState(
+                isRunning = true,
+                status = TimerStatus.WORKING,
+                timeText = "24:00",
+                primary = PrimaryControl.PAUSE,
+            ),
+            "en",
+        )
+        assertThat(compose.activity.title.toString()).isEqualTo("Working · 24:00 — Lume")
+    }
+
+    @Test
+    fun dismissControl_isACrossWithADescription() {
+        show(TimerUiState(showNotificationBanner = true), "en")
+        compose.onNodeWithText("×").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Dismiss").assertExists()
+        assertAbsent("Dismiss")
+    }
+
+    @Test
+    fun exactAlarmBanner_usesAShortActionLabel() {
+        show(TimerUiState(showExactAlarmBanner = true), "en")
+        compose.onNodeWithText("Alerts may be delayed. Allow exact alarms").assertIsDisplayed()
+        compose.onNodeWithText("Allow exact alarms").assertIsDisplayed()
+    }
+
+    @Test
+    fun titleUsesFrauncesAndBodyUsesOutfit() {
+        show(TimerUiState(), "en")
+        assertThat(fontFamily(compose.onNodeWithText("Lume"))).isEqualTo(com.marcopt74.damelume.ui.theme.LumeFonts.Fraunces)
+        assertThat(fontFamily(compose.onNodeWithText("One thing at a time")))
+            .isEqualTo(com.marcopt74.damelume.ui.theme.LumeFonts.Outfit)
+        assertThat(com.marcopt74.damelume.ui.theme.LumeTypography.timer.fontFamily)
+            .isEqualTo(com.marcopt74.damelume.ui.theme.LumeFonts.Outfit)
     }
 
     @OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
@@ -203,8 +279,9 @@ class TimerScreenTest {
                 primary = PrimaryControl.PAUSE,
             )
         show(running, "pt-PT")
-        compose.onNodeWithText("EM PAUSA LONGA").assertIsDisplayed()
         compose.onNodeWithContentDescription("Em pausa longa, 15:00 restantes").assertExists()
+        assertAbsent("EM PAUSA LONGA")
+        assertAbsent("15:00")
 
         applyLanguage("en")
         val paused =
@@ -215,11 +292,12 @@ class TimerScreenTest {
                 timeText = "14:00",
             )
         update(paused)
-        compose.onNodeWithText("LONG BREAK PAUSED").assertIsDisplayed()
         compose.onNodeWithContentDescription("Long break paused, 14:00 left").assertExists()
+        assertAbsent("LONG BREAK PAUSED")
 
         update(paused.copy(status = TimerStatus.LONG_BREAK, primary = PrimaryControl.START, timeText = "15:00"))
-        compose.onNodeWithText("LONG BREAK").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Long break, 15:00 left").assertExists()
+        assertAbsent("LONG BREAK")
     }
 
     private fun assertAbsent(text: String) {
@@ -278,5 +356,28 @@ class TimerScreenTest {
         val configuration = Configuration(base.resources.configuration)
         configuration.setLocales(LocaleList(Locale.forLanguageTag(language)))
         return base.createConfigurationContext(configuration)
+    }
+
+    private fun fontFamily(node: SemanticsNodeInteraction): FontFamily? {
+        val results = mutableListOf<TextLayoutResult>()
+        node.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { callback ->
+            callback(results)
+        }
+        return results
+            .first()
+            .layoutInput.style.fontFamily
+    }
+}
+
+private class HoldRegistry : ActivityResultRegistry() {
+    val codes = mutableListOf<Int>()
+
+    override fun <I, O> onLaunch(
+        requestCode: Int,
+        contract: ActivityResultContract<I, O>,
+        input: I,
+        options: ActivityOptionsCompat?,
+    ) {
+        codes += requestCode
     }
 }

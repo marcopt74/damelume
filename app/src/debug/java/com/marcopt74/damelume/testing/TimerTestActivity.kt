@@ -1,51 +1,42 @@
 package com.marcopt74.damelume.testing
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.marcopt74.damelume.domain.model.TimerAction
-import com.marcopt74.damelume.ui.timer.PrimaryControl
-import com.marcopt74.damelume.ui.timer.TimerContent
-import com.marcopt74.damelume.ui.timer.TimerStatus
-import com.marcopt74.damelume.ui.timer.TimerUiState
+import com.marcopt74.damelume.data.TimerRepository
+import com.marcopt74.damelume.domain.Clock
+import com.marcopt74.damelume.system.notify.DevicePermissions
+import com.marcopt74.damelume.system.sound.ForegroundTracker
+import com.marcopt74.damelume.ui.timer.TimerScreen
+import com.marcopt74.damelume.ui.timer.TimerViewModel
 
 /**
- * Debug-only host used by the rotation test. State lives in a retained [ViewModel].
+ * Debug host for the rotation test. It installs the real [TimerViewModel]
+ * from dependencies supplied by the test before launch.
  */
-class TimerTestActivity : ComponentActivity() {
-    lateinit var model: TimerHostViewModel
+class TimerTestActivity : AppCompatActivity() {
+    lateinit var viewModel: TimerViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        model = ViewModelProvider(this)[TimerHostViewModel::class.java]
+        viewModel = ViewModelProvider(this, TimerRotationHost.factory())[TimerViewModel::class.java]
         setContent {
-            TimerContent(
-                state = model.state,
-                reducedMotion = true,
-                onAction = model::onAction,
-                onFrame = {},
-            )
+            TimerScreen(viewModel = viewModel)
         }
     }
 }
 
-class TimerHostViewModel : ViewModel() {
-    var state by mutableStateOf(TimerUiState())
-        private set
+object TimerRotationHost {
+    lateinit var repository: TimerRepository
+    lateinit var clock: Clock
+    lateinit var foreground: ForegroundTracker
+    lateinit var permissions: DevicePermissions
 
-    fun onAction(action: TimerAction) {
-        if (action is TimerAction.Start) {
-            state =
-                state.copy(
-                    isRunning = true,
-                    primary = PrimaryControl.PAUSE,
-                    status = TimerStatus.WORKING,
-                )
+    fun factory(): ViewModelProvider.Factory =
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = TimerViewModel(repository, clock, foreground, permissions) as T
         }
-    }
 }

@@ -48,6 +48,9 @@
     <string name="banner_notifications_off">Notificações desligadas: não vais ver o tempo nem o aviso de fim com o ecrã bloqueado.</string>
     <string name="open_settings">Abrir definições</string>
     <string name="banner_exact_alarm">Os avisos podem atrasar. Permitir alarmes exactos</string>
+    <string name="banner_exact_alarm_action">Permitir alarmes exactos</string>
+    <string name="dismiss_symbol">×</string>
+    <string name="stepper_value">%1$d</string>
     <string name="notif_rationale_title">Notificações</string>
     <string name="notif_rationale_body">O Lume usa uma notificação para mostrar a contagem e avisar quando uma fase termina, mesmo com o ecrã desligado.</string>
     <string name="notif_rationale_allow">Permitir</string>

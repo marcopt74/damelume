@@ -83,6 +83,7 @@ object TimerEngine {
                     soundEnabled = soundEnabled,
                     zone = zone,
                     expectedEndsAt = action.expectedEndsAt,
+                    countOnReconcileDay = false,
                 )
             TimerAction.ResetSessions -> resetSessions(repaired, nowMs)
             is TimerAction.SetWorkMinutes -> setMinutes(repaired, Mode.WORK, action.minutes)
@@ -167,6 +168,7 @@ object TimerEngine {
         soundEnabled: Boolean,
         zone: ZoneId,
         expectedEndsAt: Long?,
+        countOnReconcileDay: Boolean,
     ): EngineResult {
         if (expectedEndsAt != null && state.endsAtEpochMs != expectedEndsAt) {
             return EngineResult(state = state)
@@ -178,6 +180,11 @@ object TimerEngine {
         }
         val endedAt = state.endsAtEpochMs ?: nowMs
         val late = nowMs - endedAt >= SOUND_WINDOW_MS
+        val endedDay = localDate(endedAt, zone)
+        val today = localDate(nowMs, zone)
+        // AC-28: a phase that ended yesterday and is reconciled today still counts today.
+        // An alarm that fires on its own keeps the calendar date of endedAt.
+        val bucket = if (countOnReconcileDay && endedDay.isBefore(today)) today else endedDay
         val finished = state.mode
         val planned = durationMs(state)
         val (nextMode, nextCycle) =
@@ -204,7 +211,7 @@ object TimerEngine {
                     mode = finished,
                     plannedMs = planned,
                     endedAtEpochMs = endedAt,
-                    localDate = localDate(endedAt, zone),
+                    localDate = bucket,
                     lateCompletion = late,
                 ),
             playChime = soundEnabled && !late,
@@ -284,6 +291,7 @@ object TimerEngine {
                     soundEnabled = soundEnabled,
                     zone = zone,
                     expectedEndsAt = null,
+                    countOnReconcileDay = true,
                 )
             }
             val next = state.copy(remainingMs = endsAt - nowMs)

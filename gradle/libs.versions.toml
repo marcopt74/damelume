@@ -18,6 +18,7 @@ junit = "4.13.2"
 truth = "1.4.5"
 robolectric = "4.17"
 turbine = "1.2.1"
+jorbis = "0.0.17"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -50,6 +51,7 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+jorbis = { group = "org.jcraft", name = "jorbis", version.ref = "jorbis" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

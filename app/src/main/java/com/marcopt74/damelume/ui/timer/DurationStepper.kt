@@ -17,9 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.marcopt74.damelume.R
 
 @Composable
 fun DurationStepper(
@@ -37,7 +40,7 @@ fun DurationStepper(
     onIncrease: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val labelColor = if (active) accent else Color(0xFF1C1B19)
+    val labelColor = if (active) accent else Color(0xFF6D6962)
     Row(
         modifier =
             modifier
@@ -62,14 +65,22 @@ fun DurationStepper(
                 Icon(
                     imageVector = Icons.Filled.Remove,
                     contentDescription = decreaseDescription,
-                    tint = Color(0xFF1C1B19),
+                    tint = Color(0xFF6D6962),
                 )
             }
             Text(
-                text = "$value $unit",
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
+                text = stringResource(R.string.stepper_value, value),
+                modifier = Modifier.size(width = 40.dp, height = 28.dp),
+                fontWeight = FontWeight.Medium,
+                fontSize = 20.sp,
+                textAlign = TextAlign.Center,
                 color = Color(0xFF1C1B19),
+            )
+            Text(
+                text = unit,
+                modifier = Modifier.size(width = 32.dp, height = 16.dp),
+                fontSize = 12.sp,
+                color = Color(0xFF9A958C),
             )
             IconButton(
                 onClick = onIncrease,
@@ -79,7 +90,7 @@ fun DurationStepper(
                 Icon(
                     imageVector = Icons.Filled.Add,
                     contentDescription = increaseDescription,
-                    tint = Color(0xFF1C1B19),
+                    tint = Color(0xFF6D6962),
                 )
             }
         }

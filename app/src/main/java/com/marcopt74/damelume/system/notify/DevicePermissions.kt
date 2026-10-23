@@ -1,12 +1,12 @@
 package com.marcopt74.damelume.system.notify
 
 import android.Manifest
+import android.app.Activity
 import android.app.AlarmManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
-import com.marcopt74.damelume.MainActivity
 import com.marcopt74.damelume.system.alarm.ExactAlarmCapability
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -17,9 +17,15 @@ interface DevicePermissions {
 
     fun notificationsGranted(): Boolean
 
-    fun shouldShowNotificationRationale(): Boolean
-
     fun exactAlarmCapability(): ExactAlarmCapability
+}
+
+fun notificationRationale(
+    activity: Activity?,
+    sdkInt: Int,
+): Boolean {
+    if (sdkInt < 33 || activity == null) return false
+    return activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
 }
 
 @Singleton
@@ -36,11 +42,6 @@ class AndroidDevicePermissions
                 context,
                 Manifest.permission.POST_NOTIFICATIONS,
             ) == PackageManager.PERMISSION_GRANTED
-        }
-
-        override fun shouldShowNotificationRationale(): Boolean {
-            val activity = MainActivity.resumed ?: return false
-            return activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         override fun exactAlarmCapability(): ExactAlarmCapability {

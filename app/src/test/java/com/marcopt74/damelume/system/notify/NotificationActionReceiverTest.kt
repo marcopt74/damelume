@@ -94,5 +94,8 @@ class NotificationActionReceiverTest {
             chimePlayer = RecordingChime(),
             foregroundTracker = FakeForeground(foreground = true),
             localeApplicator = FakeLocaleApplicator(),
+            scope =
+                com.marcopt74.damelume.testutil
+                    .quietAppScope(),
         )
 }

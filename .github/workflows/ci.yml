@@ -38,4 +38,4 @@ jobs:
           fi
 
       - name: Lint, unit tests and debug assemble
-        run: ./gradlew lint testDebugUnitTest assembleDebug --stacktrace
+        run: ./gradlew ktlintCheck detekt lint testDebugUnitTest assembleDebug --stacktrace

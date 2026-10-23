@@ -118,5 +118,8 @@ class BootReceiverTest {
         chimePlayer = RecordingChime(),
         foregroundTracker = FakeForeground(foreground = false),
         localeApplicator = FakeLocaleApplicator(),
+        scope =
+            com.marcopt74.damelume.testutil
+                .quietAppScope(),
     )
 }

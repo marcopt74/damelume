@@ -5,6 +5,8 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -39,7 +41,19 @@ class TimerScreenA11yTest {
                 onFrame = {},
             )
         }
-        compose.onNodeWithContentDescription("Break, 05:00 left").assertExists()
+        val dialNodes = compose.onAllNodes(hasContentDescription("Break, 05:00 left")).fetchSemanticsNodes()
+        assertThat(dialNodes).hasSize(1)
+        val dial = dialNodes.single()
+        assertThat(dial.boundsInRoot.height).isGreaterThan(0f)
+        assertThat(dial.boundsInRoot.width).isGreaterThan(0f)
+        assertThat(dial.boundsInRoot.height).isWithin(2f).of(dial.boundsInRoot.width)
+        assertThat(compose.onAllNodes(hasText("05:00")).fetchSemanticsNodes(false)).isEmpty()
+        assertThat(compose.onAllNodes(hasText("BREAK")).fetchSemanticsNodes(false)).isEmpty()
+        val liveRegions =
+            dialNodes.count { node ->
+                node.config.getOrNull(SemanticsProperties.LiveRegion) == androidx.compose.ui.semantics.LiveRegionMode.Polite
+            }
+        assertThat(liveRegions).isEqualTo(1)
         compose.onNodeWithContentDescription("Reset").assertExists()
         compose.onNodeWithContentDescription("Decrease work").assertExists()
         compose.onNodeWithContentDescription("Increase work").assertExists()

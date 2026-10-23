@@ -32,6 +32,7 @@ class TimerNotifierTest {
         assertThat(withSound.extras.getString(Notification.EXTRA_TITLE)).isEqualTo("Work session over")
         assertThat(withSound.extras.getString(Notification.EXTRA_TEXT)).isEqualTo("Time for a break · 5 min")
         assertThat(withSound.flags and Notification.FLAG_AUTO_CANCEL).isNotEqualTo(0)
+        assertContentIntent(withSound)
 
         notifier.showCompletion(Mode.BREAK, Mode.WORK, nextMinutes = 25, soundEnabled = false)
         val silent = notification(AndroidTimerNotifier.COMPLETE_ID)
@@ -66,6 +67,7 @@ class TimerNotifierTest {
         assertThat(notification.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER)).isTrue()
         assertThat(notification.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN)).isTrue()
         assertThat(notification.`when`).isEqualTo(endsAt)
+        assertContentIntent(notification)
         assertThat(notification.extras.getString(Notification.EXTRA_TITLE)).isEqualTo(context.getString(R.string.working))
         val titles = notification.actions.map { it.title.toString() }
         assertThat(titles).containsExactly(context.getString(R.string.pause), context.getString(R.string.reset)).inOrder()
@@ -108,6 +110,16 @@ class TimerNotifierTest {
     fun noOngoingWhenIdle() {
         notifier.showOngoing(TimerState())
         assertThat(shadowOf(manager()).getNotification(AndroidTimerNotifier.ONGOING_ID)).isNull()
+    }
+
+    private fun assertContentIntent(notification: Notification) {
+        val pending = notification.contentIntent ?: error("Missing content intent")
+        val intent = shadowOf(pending).savedIntent
+        assertThat(intent.component?.className).isEqualTo("com.marcopt74.damelume.MainActivity")
+        assertThat(intent.flags and android.content.Intent.FLAG_ACTIVITY_NEW_TASK).isNotEqualTo(0)
+        assertThat(intent.flags and android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP).isNotEqualTo(0)
+        assertThat(intent.flags and android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP).isNotEqualTo(0)
+        assertThat(pending.isImmutable).isTrue()
     }
 
     private fun notification(id: Int): Notification = shadowOf(manager()).getNotification(id) ?: error("Missing notification $id")

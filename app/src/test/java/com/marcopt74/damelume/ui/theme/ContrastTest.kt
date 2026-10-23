@@ -14,6 +14,8 @@ class ContrastTest {
         assertGraphic(LumePalette.graphic(Mode.WORK), LumePalette.WHITE)
 
         assertText(LumePalette.WHITE, LumePalette.button(Mode.BREAK))
+        assertThat(LumePalette.contrastRatio(LumePalette.WHITE, LumePalette.BREAK_GRAPHIC)).isLessThan(4.5)
+        assertThat(LumePalette.contrastRatio(LumePalette.WHITE, LumePalette.button(Mode.BREAK))).isAtLeast(4.5)
         assertText(LumePalette.text(Mode.BREAK), LumePalette.runningBackground(Mode.BREAK))
         assertText(LumePalette.text(Mode.BREAK), LumePalette.WHITE)
         assertGraphic(LumePalette.graphic(Mode.BREAK), LumePalette.runningBackground(Mode.BREAK))
