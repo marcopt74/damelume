@@ -1,8 +1,13 @@
 name: ci
 
+# A push to a branch that already has an open pull request also emits
+# pull_request. Running on both events checked the same commit twice.
+# pull_request covers feature branches; push is only the default branch.
 on:
-  push:
   pull_request:
+  push:
+    branches:
+      - main
 
 jobs:
   check:
@@ -16,16 +21,20 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      # v3 defaults to `sdkmanager tools`, a package cmdline-tools 16 no longer
+      # ships, so the step exits 1 before Gradle starts. v4 installs platform-tools only.
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install SDK packages
         run: |
           set -euo pipefail
+          chmod +x ./gradlew
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager --install "platforms;android-37.0" "build-tools;37.0.0" "platform-tools"
-          if [ -d "$ANDROID_HOME/platforms/android-37.0" ] && [ ! -e "$ANDROID_HOME/platforms/android-37" ]; then
-            ln -s android-37.0 "$ANDROID_HOME/platforms/android-37"
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT}}"
+          if [ -d "$sdk_root/platforms/android-37.0" ] && [ ! -e "$sdk_root/platforms/android-37" ]; then
+            ln -s android-37.0 "$sdk_root/platforms/android-37"
           fi
 
       - name: Lint, unit tests and debug assemble
