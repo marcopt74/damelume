@@ -18,16 +18,8 @@ object TimerEngine {
     const val WORK_MAX = 90
     const val BREAK_MIN = 1
     const val BREAK_MAX = 30
-    const val LONG_BREAK_MIN = 1
-    const val LONG_BREAK_MAX = 60
-    const val CYCLE_LENGTH = 4
 
-    fun durationMs(state: TimerState): Long =
-        when (state.mode) {
-            Mode.WORK -> state.workMinutes * 60_000L
-            Mode.BREAK -> state.breakMinutes * 60_000L
-            Mode.LONG_BREAK -> state.longBreakMinutes * 60_000L
-        }
+    fun durationMs(state: TimerState): Long = minutesOf(state, state.mode) * 60_000L
 
     fun displayedRemainingMs(
         state: TimerState,
@@ -47,55 +39,36 @@ object TimerEngine {
         return state.remainingMs in 1 until total
     }
 
-    /**
-     * `mode == LONG_BREAK` iff `cycleWorkCount == 4`. Mode wins when a persisted
-     * snapshot breaks the invariant: a long break is forced to 4, and a cycle of 4
-     * outside a long break is cleared.
-     */
-    fun repairCycle(state: TimerState): TimerState {
-        val clamped = state.cycleWorkCount.coerceIn(0, CYCLE_LENGTH)
-        val cycle =
-            when {
-                state.mode == Mode.LONG_BREAK && clamped != CYCLE_LENGTH -> CYCLE_LENGTH
-                state.mode != Mode.LONG_BREAK && clamped == CYCLE_LENGTH -> 0
-                else -> clamped
-            }
-        return if (cycle == state.cycleWorkCount) state else state.copy(cycleWorkCount = cycle)
-    }
-
     fun reduce(
         state: TimerState,
         action: TimerAction,
         nowMs: Long,
         soundEnabled: Boolean,
         zone: ZoneId,
-    ): EngineResult {
-        val repaired = repairCycle(state)
-        return when (action) {
-            TimerAction.Start -> start(repaired, nowMs)
-            TimerAction.Pause -> pause(repaired, nowMs)
-            TimerAction.Reset -> reset(repaired)
-            TimerAction.SkipBreak -> skip(repaired)
+    ): EngineResult =
+        when (action) {
+            TimerAction.Start -> start(state, nowMs)
+            TimerAction.Pause -> pause(state, nowMs)
+            TimerAction.Reset -> reset(state)
+            TimerAction.SkipBreak -> skip(state)
             is TimerAction.Complete ->
                 complete(
-                    state = repaired,
+                    state = state,
                     nowMs = nowMs,
                     soundEnabled = soundEnabled,
                     zone = zone,
                     expectedEndsAt = action.expectedEndsAt,
                 )
-            TimerAction.ResetSessions -> resetSessions(repaired, nowMs)
-            is TimerAction.SetWorkMinutes -> setMinutes(repaired, Mode.WORK, action.minutes)
-            is TimerAction.SetBreakMinutes -> setMinutes(repaired, Mode.BREAK, action.minutes)
-            is TimerAction.SetLongBreakMinutes -> setMinutes(repaired, Mode.LONG_BREAK, action.minutes)
-            TimerAction.Reconcile -> reconcile(repaired, nowMs, soundEnabled, zone)
+            TimerAction.ResetSessions -> resetSessions(state, nowMs)
+            is TimerAction.SetWorkMinutes -> setMinutes(state, Mode.WORK, action.minutes)
+            is TimerAction.SetBreakMinutes -> setMinutes(state, Mode.BREAK, action.minutes)
+            TimerAction.Reconcile -> reconcile(state, nowMs, soundEnabled, zone)
             is TimerAction.SetSoundEnabled,
             is TimerAction.SetLocale,
             TimerAction.MarkNotificationAsked,
             TimerAction.DismissNotificationBanner,
-            -> EngineResult(state = repaired)
+            -> EngineResult(state = state)
         }
-    }
 
     private fun start(
         state: TimerState,
@@ -142,17 +115,13 @@ object TimerEngine {
     }
 
     private fun skip(state: TimerState): EngineResult {
-        if (state.mode != Mode.BREAK && state.mode != Mode.LONG_BREAK) {
-            return EngineResult(state = state)
-        }
-        val cycle = if (state.mode == Mode.LONG_BREAK) 0 else state.cycleWorkCount
+        if (state.mode != Mode.BREAK) return EngineResult(state = state)
         val next =
             state.copy(
                 mode = Mode.WORK,
                 isRunning = false,
                 endsAtEpochMs = null,
                 remainingMs = state.workMinutes * 60_000L,
-                cycleWorkCount = cycle,
             )
         return EngineResult(
             state = next,
@@ -179,30 +148,20 @@ object TimerEngine {
         val endedAt = state.endsAtEpochMs ?: nowMs
         val late = nowMs - endedAt >= SOUND_WINDOW_MS
         val finished = state.mode
-        val planned = durationMs(state)
-        val (nextMode, nextCycle) =
-            when (finished) {
-                Mode.WORK -> {
-                    val cycle = state.cycleWorkCount + 1
-                    if (cycle >= CYCLE_LENGTH) Mode.LONG_BREAK to CYCLE_LENGTH else Mode.BREAK to cycle
-                }
-                Mode.BREAK -> Mode.WORK to state.cycleWorkCount
-                Mode.LONG_BREAK -> Mode.WORK to 0
-            }
+        val nextMode = if (finished == Mode.WORK) Mode.BREAK else Mode.WORK
         val next =
             state.copy(
                 mode = nextMode,
                 isRunning = false,
                 endsAtEpochMs = null,
                 remainingMs = minutesOf(state, nextMode) * 60_000L,
-                cycleWorkCount = nextCycle,
             )
         return EngineResult(
             state = next,
             session =
                 SessionDraft(
                     mode = finished,
-                    plannedMs = planned,
+                    plannedMs = durationMs(state),
                     endedAtEpochMs = endedAt,
                     localDate = localDate(endedAt, zone),
                     lateCompletion = late,
@@ -216,34 +175,17 @@ object TimerEngine {
     private fun resetSessions(
         state: TimerState,
         nowMs: Long,
-    ): EngineResult {
-        val leavingLongBreak = state.mode == Mode.LONG_BREAK
-        val next =
-            if (leavingLongBreak) {
-                state.copy(
-                    mode = Mode.WORK,
-                    isRunning = false,
-                    endsAtEpochMs = null,
-                    remainingMs = state.workMinutes * 60_000L,
-                    cycleWorkCount = 0,
-                )
-            } else {
-                state.copy(cycleWorkCount = 0)
-            }
-        return EngineResult(
-            state = next,
-            alarm = if (leavingLongBreak) AlarmCommand.Cancel else AlarmCommand.Unchanged,
+    ): EngineResult =
+        EngineResult(
+            state = state,
             ongoing =
-                if (leavingLongBreak) {
-                    OngoingCommand.Cancel
-                } else if (isMidPause(next) || next.isRunning) {
+                if (isMidPause(state) || state.isRunning) {
                     OngoingCommand.Update
                 } else {
                     OngoingCommand.Unchanged
                 },
             sessionsResetAtEpochMs = nowMs,
         )
-    }
 
     private fun setMinutes(
         state: TimerState,
@@ -255,7 +197,6 @@ object TimerEngine {
             when (target) {
                 Mode.WORK -> state.copy(workMinutes = clamped)
                 Mode.BREAK -> state.copy(breakMinutes = clamped)
-                Mode.LONG_BREAK -> state.copy(longBreakMinutes = clamped)
             }
         if (!state.isRunning && state.mode == target) {
             next = next.copy(remainingMs = clamped * 60_000L)
@@ -308,7 +249,6 @@ object TimerEngine {
         when (mode) {
             Mode.WORK -> minutes.coerceIn(WORK_MIN, WORK_MAX)
             Mode.BREAK -> minutes.coerceIn(BREAK_MIN, BREAK_MAX)
-            Mode.LONG_BREAK -> minutes.coerceIn(LONG_BREAK_MIN, LONG_BREAK_MAX)
         }
 
     private fun minutesOf(
@@ -318,7 +258,6 @@ object TimerEngine {
         when (mode) {
             Mode.WORK -> state.workMinutes
             Mode.BREAK -> state.breakMinutes
-            Mode.LONG_BREAK -> state.longBreakMinutes
         }
 
     fun localDate(

@@ -16,13 +16,16 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ActivityScenario
 import com.google.common.truth.Truth.assertThat
 import com.marcopt74.damelume.R
@@ -56,9 +59,12 @@ class TimerScreenTest {
             .assertIsDisplayed()
         compose.onNodeWithText(pt.getString(R.string.reset_sessions)).assertIsNotEnabled()
         compose.onNode(hasContentDescription(pt.getString(R.string.sound_off))).assertIsOn()
-        compose.onNodeWithText("25 min").assertIsDisplayed()
-        compose.onNodeWithText("5 min").assertIsDisplayed()
-        compose.onNodeWithText("15 min").assertIsDisplayed()
+        compose.onNodeWithText("25").assertIsDisplayed()
+        compose.onNodeWithText("5").assertIsDisplayed()
+        assertThat(
+            compose.onAllNodes(hasText(pt.getString(R.string.minutes))).fetchSemanticsNodes().size,
+        ).isEqualTo(2)
+        assertAbsent("15")
         assertAbsent(pt.getString(R.string.skip_break))
     }
 
@@ -67,20 +73,6 @@ class TimerScreenTest {
         show(TimerUiState(mode = Mode.WORK), "en")
         assertAbsent("Skip break")
         update(TimerUiState(mode = Mode.BREAK, showSkip = true, status = TimerStatus.BREAK))
-        compose.onNodeWithText("Skip break").assertIsDisplayed()
-    }
-
-    @Test
-    fun skipBreak_visibleInLongBreak() {
-        show(
-            TimerUiState(
-                mode = Mode.LONG_BREAK,
-                showSkip = true,
-                status = TimerStatus.LONG_BREAK,
-                cycleWorkCount = 4,
-            ),
-            "en",
-        )
         compose.onNodeWithText("Skip break").assertIsDisplayed()
     }
 
@@ -127,8 +119,27 @@ class TimerScreenTest {
         compose.onNodeWithContentDescription("Increase work").assertIsNotEnabled()
         compose.onNodeWithContentDescription("Decrease break").assertIsNotEnabled()
         compose.onNodeWithContentDescription("Increase break").assertIsNotEnabled()
-        compose.onNodeWithContentDescription("Decrease long break").assertIsNotEnabled()
-        compose.onNodeWithContentDescription("Increase long break").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Edit work minutes").assertIsNotEnabled()
+    }
+
+    @Test
+    fun typedMinutes_commitPositiveInteger() {
+        val actions = mutableListOf<TimerAction>()
+        show(TimerUiState(), "en") { actions += it }
+        compose.onNodeWithContentDescription("Edit work minutes").performClick()
+        compose.onNode(hasSetTextAction()).performTextReplacement("40")
+        compose.onNode(hasSetTextAction()).performImeAction()
+        assertThat(actions).contains(TimerAction.SetWorkMinutes(40))
+    }
+
+    @Test
+    fun typedZero_isIgnored() {
+        val actions = mutableListOf<TimerAction>()
+        show(TimerUiState(), "en") { actions += it }
+        compose.onNodeWithContentDescription("Edit break minutes").performClick()
+        compose.onNode(hasSetTextAction()).performTextReplacement("0")
+        compose.onNode(hasSetTextAction()).performImeAction()
+        assertThat(actions.filterIsInstance<TimerAction.SetBreakMinutes>()).isEmpty()
     }
 
     @Test
@@ -191,35 +202,31 @@ class TimerScreenTest {
     }
 
     @Test
-    fun longBreakLabels_ptAndEn() {
+    fun breakLabels_ptAndEn() {
         val running =
             TimerUiState(
-                mode = Mode.LONG_BREAK,
-                status = TimerStatus.LONG_RESTING,
-                timeText = "15:00",
+                mode = Mode.BREAK,
+                status = TimerStatus.RESTING,
+                timeText = "05:00",
                 showSkip = true,
-                cycleWorkCount = 4,
                 isRunning = true,
                 primary = PrimaryControl.PAUSE,
             )
         show(running, "pt-PT")
-        compose.onNodeWithText("EM PAUSA LONGA").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Em pausa longa, 15:00 restantes").assertExists()
+        compose.onNodeWithText("A DESCANSAR").assertIsDisplayed()
+        compose.onNodeWithContentDescription("A descansar, 05:00 restantes").assertExists()
 
         applyLanguage("en")
         val paused =
             running.copy(
                 isRunning = false,
-                status = TimerStatus.LONG_BREAK_PAUSED,
+                status = TimerStatus.BREAK_PAUSED,
                 primary = PrimaryControl.RESUME,
-                timeText = "14:00",
+                timeText = "04:00",
             )
         update(paused)
-        compose.onNodeWithText("LONG BREAK PAUSED").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Long break paused, 14:00 left").assertExists()
-
-        update(paused.copy(status = TimerStatus.LONG_BREAK, primary = PrimaryControl.START, timeText = "15:00"))
-        compose.onNodeWithText("LONG BREAK").assertIsDisplayed()
+        compose.onNodeWithText("BREAK PAUSED").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Break paused, 04:00 left").assertExists()
     }
 
     private fun assertAbsent(text: String) {

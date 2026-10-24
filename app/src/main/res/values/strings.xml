@@ -21,27 +21,19 @@
     <string name="remaining">%1$s, %2$s left</string>
     <string name="decrease_work">Decrease work</string>
     <string name="increase_work">Increase work</string>
+    <string name="edit_work_minutes">Edit work minutes</string>
     <string name="decrease_break">Decrease break</string>
     <string name="increase_break">Increase break</string>
+    <string name="edit_break_minutes">Edit break minutes</string>
     <string name="window_title">%1$s · %2$s — Lume</string>
     <string name="locale_pt">PT</string>
     <string name="locale_en">EN</string>
     <string name="dismiss">Dismiss</string>
 
-    <!-- new, not in reference -->
-    <string name="long_break">Long break</string>
-    <string name="long_resting">On a long break</string>
-    <string name="long_break_paused">Long break paused</string>
-    <string name="decrease_long_break">Decrease long break</string>
-    <string name="increase_long_break">Increase long break</string>
-    <string name="cycle_progress_cd">%1$d of 4 sessions in cycle</string>
     <string name="notif_work_done_title">Work session over</string>
     <string name="notif_break_done_title">Break over</string>
-    <string name="notif_long_break_done_title">Long break over</string>
     <string name="notif_break_next">Time for a break · %1$d min</string>
-    <string name="notif_long_break_next">Time for a long break · %1$d min</string>
     <string name="notif_work_next">Ready to work · %1$d min</string>
-    <string name="notif_paused_long_break">Long break paused · %1$s</string>
     <string name="channel_timer_running">Timer running</string>
     <string name="channel_session_complete">Session over</string>
     <string name="channel_session_complete_silent">Session over (silent)</string>

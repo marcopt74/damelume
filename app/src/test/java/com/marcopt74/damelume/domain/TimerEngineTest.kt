@@ -54,13 +54,12 @@ class TimerEngineTest {
     fun completeWork_switchesToBreak_incrementsCount() {
         val result =
             reduce(
-                runningWork(endsAt = 1_000, cycle = 1),
+                runningWork(endsAt = 1_000),
                 TimerAction.Complete(expectedEndsAt = 1_000),
                 now = 1_000,
             )
         assertThat(result.state.mode).isEqualTo(Mode.BREAK)
         assertThat(result.state.isRunning).isFalse()
-        assertThat(result.state.cycleWorkCount).isEqualTo(2)
         assertThat(result.state.remainingMs).isEqualTo(5 * 60_000L)
         assertThat(result.session!!.mode).isEqualTo(Mode.WORK)
         assertThat(result.playChime).isTrue()
@@ -74,7 +73,6 @@ class TimerEngineTest {
                     mode = Mode.BREAK,
                     isRunning = true,
                     endsAtEpochMs = 2_000,
-                    cycleWorkCount = 2,
                     workMinutes = 25,
                 ),
                 TimerAction.Complete(expectedEndsAt = 2_000),
@@ -82,13 +80,12 @@ class TimerEngineTest {
             )
         assertThat(result.state.mode).isEqualTo(Mode.WORK)
         assertThat(result.state.isRunning).isFalse()
-        assertThat(result.state.cycleWorkCount).isEqualTo(2)
         assertThat(result.session!!.mode).isEqualTo(Mode.BREAK)
     }
 
     @Test
     fun complete_ignoredAbove200ms() {
-        val state = runningWork(endsAt = 10_000, cycle = 0)
+        val state = runningWork(endsAt = 10_000)
         val result = reduce(state, TimerAction.Complete(expectedEndsAt = 10_000), now = 9_000)
         assertThat(result.state).isEqualTo(state)
         assertThat(result.session).isNull()
@@ -98,17 +95,15 @@ class TimerEngineTest {
     fun skipBreak() {
         val result =
             reduce(
-                TimerState(mode = Mode.BREAK, isRunning = true, endsAtEpochMs = 50, cycleWorkCount = 2, workMinutes = 25),
+                TimerState(mode = Mode.BREAK, isRunning = true, endsAtEpochMs = 50, workMinutes = 25),
                 TimerAction.SkipBreak,
             )
         assertThat(result.state.mode).isEqualTo(Mode.WORK)
         assertThat(result.state.isRunning).isFalse()
         assertThat(result.state.remainingMs).isEqualTo(25 * 60_000L)
-        assertThat(result.state.cycleWorkCount).isEqualTo(2)
         assertThat(result.session).isNull()
-        val ignored = reduce(TimerState(mode = Mode.WORK, cycleWorkCount = 1), TimerAction.SkipBreak)
+        val ignored = reduce(TimerState(mode = Mode.WORK), TimerAction.SkipBreak)
         assertThat(ignored.state.mode).isEqualTo(Mode.WORK)
-        assertThat(ignored.state.cycleWorkCount).isEqualTo(1)
     }
 
     @Test
@@ -149,7 +144,7 @@ class TimerEngineTest {
     fun reconcile_running_future() {
         val result =
             reduce(
-                runningWork(endsAt = 50_000, cycle = 1),
+                runningWork(endsAt = 50_000),
                 TimerAction.Reconcile,
                 now = 40_000,
             )
@@ -165,7 +160,7 @@ class TimerEngineTest {
         val endsAt = 1_000_000L
         val result =
             reduce(
-                runningWork(endsAt = endsAt, cycle = 0),
+                runningWork(endsAt = endsAt),
                 TimerAction.Reconcile,
                 now = endsAt + 30_000,
             )
@@ -181,7 +176,7 @@ class TimerEngineTest {
         val endsAt = 1_000_000L
         val result =
             reduce(
-                runningWork(endsAt = endsAt, cycle = 0),
+                runningWork(endsAt = endsAt),
                 TimerAction.Reconcile,
                 now = endsAt + 120_000,
                 sound = true,
@@ -197,171 +192,61 @@ class TimerEngineTest {
         val now = epoch(2026, 10, 23, 9, 0)
         val result =
             reduce(
-                runningWork(endsAt = endsAt, cycle = 2),
+                runningWork(endsAt = endsAt),
                 TimerAction.Reconcile,
                 now = now,
             )
         assertThat(result.session!!.localDate).isEqualTo(LocalDate.of(2026, 10, 22))
         assertThat(result.session!!.localDate).isNotEqualTo(LocalDate.of(2026, 10, 23))
-        assertThat(result.state.cycleWorkCount).isEqualTo(3)
         assertThat(result.state.mode).isEqualTo(Mode.BREAK)
         assertThat(result.playChime).isFalse()
     }
 
     @Test
-    fun completeFourthWork_goesToLongBreak_cycle4() {
+    fun completeFourthWork_stillEntersBreak() {
         val result =
             reduce(
-                runningWork(endsAt = 5_000, cycle = 3),
+                runningWork(endsAt = 5_000),
                 TimerAction.Complete(expectedEndsAt = 5_000),
                 now = 5_000,
             )
-        assertThat(result.state.mode).isEqualTo(Mode.LONG_BREAK)
-        assertThat(result.state.cycleWorkCount).isEqualTo(4)
+        assertThat(result.state.mode).isEqualTo(Mode.BREAK)
         assertThat(result.state.isRunning).isFalse()
-        assertThat(result.state.remainingMs).isEqualTo(15 * 60_000L)
+        assertThat(result.state.remainingMs).isEqualTo(5 * 60_000L)
         assertThat(result.session!!.mode).isEqualTo(Mode.WORK)
     }
 
     @Test
-    fun completeLongBreak_resetsCycle_noAutoStart() {
+    fun resetSessions_keepsPhase() {
         val result =
             reduce(
-                TimerState(
-                    mode = Mode.LONG_BREAK,
-                    isRunning = true,
-                    endsAtEpochMs = 8_000,
-                    cycleWorkCount = 4,
-                    workMinutes = 25,
-                ),
-                TimerAction.Complete(expectedEndsAt = 8_000),
-                now = 8_000,
-            )
-        assertThat(result.state.mode).isEqualTo(Mode.WORK)
-        assertThat(result.state.isRunning).isFalse()
-        assertThat(result.state.cycleWorkCount).isEqualTo(0)
-        assertThat(result.state.remainingMs).isEqualTo(25 * 60_000L)
-        assertThat(result.session!!.mode).isEqualTo(Mode.LONG_BREAK)
-    }
-
-    @Test
-    fun completeWork_cycleBelow3_goesToShortBreak() {
-        val result =
-            reduce(
-                runningWork(endsAt = 3_000, cycle = 2),
-                TimerAction.Complete(expectedEndsAt = 3_000),
-                now = 3_000,
-            )
-        assertThat(result.state.mode).isEqualTo(Mode.BREAK)
-        assertThat(result.state.cycleWorkCount).isEqualTo(3)
-    }
-
-    @Test
-    fun skipLongBreak_resetsCycle() {
-        val result =
-            reduce(
-                TimerState(mode = Mode.LONG_BREAK, cycleWorkCount = 4, workMinutes = 25, isRunning = true, endsAtEpochMs = 10),
-                TimerAction.SkipBreak,
-            )
-        assertThat(result.state.mode).isEqualTo(Mode.WORK)
-        assertThat(result.state.cycleWorkCount).isEqualTo(0)
-        assertThat(result.state.isRunning).isFalse()
-        assertThat(result.state.remainingMs).isEqualTo(25 * 60_000L)
-        assertThat(result.alarm).isEqualTo(AlarmCommand.Cancel)
-    }
-
-    @Test
-    fun setLongBreak_clamps_1_60() {
-        assertThat(reduce(TimerState(), TimerAction.SetLongBreakMinutes(0)).state.longBreakMinutes).isEqualTo(1)
-        assertThat(reduce(TimerState(), TimerAction.SetLongBreakMinutes(60)).state.longBreakMinutes).isEqualTo(60)
-        assertThat(reduce(TimerState(), TimerAction.SetLongBreakMinutes(61)).state.longBreakMinutes).isEqualTo(60)
-    }
-
-    @Test
-    fun setLongBreak_resetsRemainingWhenCurrentAndStopped() {
-        val stopped = TimerState(mode = Mode.LONG_BREAK, cycleWorkCount = 4, remainingMs = 4_000, longBreakMinutes = 15)
-        val updated = reduce(stopped, TimerAction.SetLongBreakMinutes(20))
-        assertThat(updated.state.remainingMs).isEqualTo(20 * 60_000L)
-        val other = reduce(TimerState(mode = Mode.WORK, remainingMs = 9_000), TimerAction.SetLongBreakMinutes(20))
-        assertThat(other.state.remainingMs).isEqualTo(9_000)
-    }
-
-    @Test
-    fun resetSessions_inLongBreak_returnsToWork() {
-        val result =
-            reduce(
-                TimerState(mode = Mode.LONG_BREAK, cycleWorkCount = 4, isRunning = true, endsAtEpochMs = 70, workMinutes = 25),
-                TimerAction.ResetSessions,
-                now = 80,
-            )
-        assertThat(result.state.mode).isEqualTo(Mode.WORK)
-        assertThat(result.state.cycleWorkCount).isEqualTo(0)
-        assertThat(result.state.isRunning).isFalse()
-        assertThat(result.state.remainingMs).isEqualTo(25 * 60_000L)
-        assertThat(result.alarm).isEqualTo(AlarmCommand.Cancel)
-        assertThat(result.sessionsResetAtEpochMs).isEqualTo(80)
-    }
-
-    @Test
-    fun resetSessions_resetsCycle() {
-        val result =
-            reduce(
-                TimerState(mode = Mode.BREAK, cycleWorkCount = 2, isRunning = true, endsAtEpochMs = 10),
+                TimerState(mode = Mode.BREAK, isRunning = true, endsAtEpochMs = 10),
                 TimerAction.ResetSessions,
                 now = 11,
             )
-        assertThat(result.state.cycleWorkCount).isEqualTo(0)
         assertThat(result.state.mode).isEqualTo(Mode.BREAK)
         assertThat(result.state.isRunning).isTrue()
+        assertThat(result.sessionsResetAtEpochMs).isEqualTo(11)
+        assertThat(result.alarm).isEqualTo(AlarmCommand.Unchanged)
     }
 
     @Test
-    fun reconcile_newDay_keepsCycle_resetsDaily() {
-        val state = TimerState(mode = Mode.WORK, isRunning = false, cycleWorkCount = 2, remainingMs = 25 * 60_000L)
+    fun reconcile_idle_keepsMode() {
+        val state = TimerState(mode = Mode.WORK, isRunning = false, remainingMs = 25 * 60_000L)
         val result = reduce(state, TimerAction.Reconcile, now = epoch(2026, 10, 23, 8, 0))
-        assertThat(result.state.cycleWorkCount).isEqualTo(2)
         assertThat(result.session).isNull()
         assertThat(result.state.mode).isEqualTo(Mode.WORK)
     }
 
-    @Test
-    fun reconcile_repairsCycleInvariant() {
-        val broken = TimerState(mode = Mode.LONG_BREAK, cycleWorkCount = 1, isRunning = false)
-        val result = reduce(broken, TimerAction.Reconcile)
-        assertThat(result.state.mode).isEqualTo(Mode.LONG_BREAK)
-        assertThat(result.state.cycleWorkCount).isEqualTo(4)
-        val otherWay = TimerState(mode = Mode.WORK, cycleWorkCount = 4)
-        assertThat(reduce(otherWay, TimerAction.Reconcile).state.cycleWorkCount).isEqualTo(0)
-    }
-
-    @Test
-    fun reconcile_longBreakPast_resetsCycle() {
-        val endsAt = 20_000L
-        val result =
-            reduce(
-                TimerState(mode = Mode.LONG_BREAK, cycleWorkCount = 4, isRunning = true, endsAtEpochMs = endsAt, workMinutes = 25),
-                TimerAction.Reconcile,
-                now = endsAt + 1_000,
-            )
-        assertThat(result.state.mode).isEqualTo(Mode.WORK)
-        assertThat(result.state.cycleWorkCount).isEqualTo(0)
-        assertThat(result.state.isRunning).isFalse()
-        assertThat(result.playChime).isTrue()
-    }
-
-    private fun runningWork(
-        endsAt: Long,
-        cycle: Int,
-    ) = TimerState(
-        mode = Mode.WORK,
-        isRunning = true,
-        endsAtEpochMs = endsAt,
-        remainingMs = 1_000,
-        cycleWorkCount = cycle,
-        workMinutes = 25,
-        breakMinutes = 5,
-        longBreakMinutes = 15,
-    )
+    private fun runningWork(endsAt: Long) =
+        TimerState(
+            mode = Mode.WORK,
+            isRunning = true,
+            endsAtEpochMs = endsAt,
+            remainingMs = 1_000,
+            workMinutes = 25,
+            breakMinutes = 5,
+        )
 
     private fun reduce(
         state: TimerState,

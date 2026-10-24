@@ -1,51 +1,42 @@
 package com.marcopt74.damelume.ui.timer
 
 import android.Manifest
+import android.app.Activity
+import android.app.ActivityManager
 import android.content.Intent
-import android.content.res.Configuration
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,19 +53,21 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -85,9 +78,15 @@ import com.marcopt74.damelume.domain.TimerEngine
 import com.marcopt74.damelume.domain.model.AppLocale
 import com.marcopt74.damelume.domain.model.Mode
 import com.marcopt74.damelume.domain.model.TimerAction
+import com.marcopt74.damelume.ui.theme.CardShape
 import com.marcopt74.damelume.ui.theme.EaseSmoothOut
 import com.marcopt74.damelume.ui.theme.LocalModeColors
+import com.marcopt74.damelume.ui.theme.LocalReducedMotion
+import com.marcopt74.damelume.ui.theme.LumePalette
 import com.marcopt74.damelume.ui.theme.LumeTheme
+import com.marcopt74.damelume.ui.theme.LumeType
+import com.marcopt74.damelume.ui.theme.lumeShadowBorder
+import com.marcopt74.damelume.ui.theme.timerDigitSizeSp
 
 @Composable
 fun TimerScreen(viewModel: TimerViewModel = hiltViewModel()) {
@@ -98,10 +97,9 @@ fun TimerScreen(viewModel: TimerViewModel = hiltViewModel()) {
             viewModel.onResume()
         }
     }
-    val reducedMotion = rememberReducedMotion()
     TimerContent(
         state = state,
-        reducedMotion = reducedMotion,
+        reducedMotion = rememberReducedMotion(),
         onAction = viewModel::onAction,
         onFrame = viewModel::onFrame,
     )
@@ -120,23 +118,21 @@ fun TimerContent(
         val focusRequester = remember { FocusRequester() }
         var showRationale by remember { mutableStateOf(false) }
         val permissionLauncher =
-            rememberLauncherForActivityResult(
-                ActivityResultContracts.RequestPermission(),
-            ) { onAction(TimerAction.MarkNotificationAsked) }
+            rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+                onAction(TimerAction.MarkNotificationAsked)
+            }
         LaunchedEffect(Unit) { focusRequester.requestFocus() }
         RunningClockEffect(state = state, reducedMotion = reducedMotion, onFrame = onFrame)
-        val configuration = LocalConfiguration.current
-        val wide =
-            configuration.screenWidthDp >= 600 ||
-                configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        RecentsTitle(state)
         val onPrimary = {
             handlePrimary(state, onAction, permissionLauncher) { showRationale = true }
         }
-        Box(
+        BoxWithConstraints(
             modifier =
                 modifier
                     .fillMaxSize()
                     .background(androidx.compose.material3.MaterialTheme.colorScheme.background)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
                     .focusRequester(focusRequester)
                     .focusable()
                     .onPreviewKeyEvent { event ->
@@ -148,25 +144,20 @@ fun TimerContent(
                         }
                     },
         ) {
-            Column(
+            ProportionalPage(
+                viewportHeight = maxHeight,
                 modifier =
                     Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-            ) {
-                Header(state = state, accent = colors.accent, onAction = onAction)
-                PermissionBanners(state = state, onAction = onAction)
-                TimerBody(
-                    state = state,
-                    reducedMotion = reducedMotion,
-                    wide = wide,
-                    onPrimary = onPrimary,
-                    onAction = onAction,
-                )
-            }
+                        .align(Alignment.TopCenter)
+                        .widthIn(max = 576.dp)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                header = { Header(state = state, accent = colors.accent, onAction = onAction) },
+                banners = { PermissionBanners(state = state, onAction = onAction) },
+                dial = { DialBlock(state = state, accent = colors.accent) },
+                controls = { Controls(state = state, onPrimary = onPrimary, onAction = onAction) },
+                card = { DurationCard(state = state, accent = colors.accent, onAction = onAction) },
+            )
         }
         if (showRationale) {
             NotificationRationaleDialog(
@@ -182,24 +173,119 @@ fun TimerContent(
 }
 
 @Composable
+private fun ProportionalPage(
+    viewportHeight: Dp,
+    modifier: Modifier = Modifier,
+    header: @Composable () -> Unit,
+    banners: @Composable () -> Unit,
+    dial: @Composable () -> Unit,
+    controls: @Composable () -> Unit,
+    card: @Composable () -> Unit,
+) {
+    Layout(
+        content = {
+            Box(Modifier.fillMaxWidth()) { header() }
+            Box(Modifier.fillMaxWidth()) { banners() }
+            Box(Modifier.fillMaxSize()) { dial() }
+            Box(Modifier.fillMaxWidth()) { controls() }
+            Box(Modifier.fillMaxWidth()) { card() }
+        },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val viewport = viewportHeight.roundToPx()
+        val horizontal = 20.dp.roundToPx()
+        val vertical = 12.dp.roundToPx()
+        val baseGap = 16.dp.roundToPx()
+        val contentWidth = (constraints.maxWidth - horizontal * 2).coerceAtLeast(0)
+        val loose = Constraints(maxWidth = contentWidth)
+        val headerPlaceable = measurables[0].measure(loose)
+        val bannerPlaceable = measurables[1].measure(loose)
+        val controlsHeight = measurables[3].maxIntrinsicHeight(contentWidth)
+        val cardHeight = measurables[4].maxIntrinsicHeight(contentWidth)
+        val bannerGap = if (bannerPlaceable.height > 0) baseGap else 0
+        val spacing =
+            pageSpacing(
+                viewportHeight = viewport,
+                contentWidth = contentWidth,
+                headerHeight = headerPlaceable.height,
+                bannerHeight = bannerPlaceable.height,
+                controlsHeight = controlsHeight,
+                cardHeight = cardHeight,
+                bannerGap = bannerGap,
+                verticalPadding = vertical,
+                baseGap = baseGap,
+                minDial = 200.dp.roundToPx(),
+                maxDial = 448.dp.roundToPx(),
+            )
+        val group = Constraints(maxWidth = spacing.dialSide)
+        val dialPlaceable = measurables[2].measure(Constraints.fixed(spacing.dialSide, spacing.dialSide))
+        val controlsPlaceable = measurables[3].measure(group)
+        val cardPlaceable = measurables[4].measure(group)
+        val groupX = horizontal + (contentWidth - spacing.dialSide) / 2
+        val used =
+            vertical * 2 +
+                headerPlaceable.height +
+                bannerGap +
+                bannerPlaceable.height +
+                spacing.gapBeforeDial +
+                dialPlaceable.height +
+                spacing.gapAfterDial +
+                controlsPlaceable.height +
+                spacing.gapBeforeCard +
+                cardPlaceable.height
+        val height = maxOf(spacing.height, used)
+        layout(constraints.maxWidth, height) {
+            var y = vertical
+            headerPlaceable.place(horizontal, y)
+            y += headerPlaceable.height
+            if (bannerPlaceable.height > 0) {
+                y += bannerGap
+                bannerPlaceable.place(horizontal, y)
+                y += bannerPlaceable.height
+            }
+            y += spacing.gapBeforeDial
+            dialPlaceable.place(groupX, y)
+            y += dialPlaceable.height
+            y += spacing.gapAfterDial
+            controlsPlaceable.place(groupX, y)
+            y += controlsPlaceable.height
+            y += spacing.gapBeforeCard
+            cardPlaceable.place(groupX, y)
+        }
+    }
+}
+
+@Composable
 private fun RunningClockEffect(
     state: TimerUiState,
     reducedMotion: Boolean,
     onFrame: (Long) -> Unit,
 ) {
-    if (state.isRunning && !reducedMotion) {
-        LaunchedEffect(state.endsAtEpochMs) {
-            while (true) {
-                withFrameNanos { onFrame(System.currentTimeMillis()) }
-            }
-        }
-    } else if (state.isRunning) {
-        LaunchedEffect(state.endsAtEpochMs) {
+    if (!state.isRunning) return
+    LaunchedEffect(state.endsAtEpochMs, reducedMotion) {
+        if (reducedMotion) {
             while (true) {
                 onFrame(System.currentTimeMillis())
                 kotlinx.coroutines.delay(1_000)
             }
+        } else {
+            while (true) {
+                androidx.compose.runtime.withFrameNanos { onFrame(System.currentTimeMillis()) }
+            }
         }
+    }
+}
+
+@Composable
+private fun RecentsTitle(state: TimerUiState) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val modeLabel = stringResource(if (state.mode == Mode.WORK) R.string.work else R.string.break_label)
+    val runningTitle = stringResource(R.string.window_title, state.timeText, modeLabel)
+    val idleTitle = stringResource(R.string.app_name)
+    SideEffect {
+        val label = if (state.isRunning) runningTitle else idleTitle
+        activity?.setTaskDescription(ActivityManager.TaskDescription(label))
     }
 }
 
@@ -230,49 +316,39 @@ private fun PermissionBanners(
 }
 
 @Composable
-private fun TimerBody(
-    state: TimerUiState,
-    reducedMotion: Boolean,
-    wide: Boolean,
-    onPrimary: () -> Unit,
-    onAction: (TimerAction) -> Unit,
-) {
-    val colors = LocalModeColors.current
-    if (wide) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            DialBlock(state = state, reducedMotion = reducedMotion, accent = colors.accent, modifier = Modifier.weight(1f))
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Controls(state = state, onPrimary = onPrimary, onAction = onAction)
-                DurationCard(state = state, accent = colors.accentText, onAction = onAction)
-            }
-        }
-    } else {
-        DialBlock(state = state, reducedMotion = reducedMotion, accent = colors.accent)
-        Controls(state = state, onPrimary = onPrimary, onAction = onAction)
-        DurationCard(state = state, accent = colors.accentText, onAction = onAction)
-    }
-}
-
-@Composable
 private fun NotificationRationaleDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.notif_rationale_title)) },
-        text = { Text(stringResource(R.string.notif_rationale_body)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) { Text(stringResource(R.string.notif_rationale_allow)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dismiss)) }
-        },
-    )
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier =
+                Modifier
+                    .lumeShadowBorder(CardShape)
+                    .background(Color.White)
+                    .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.notif_rationale_title),
+                style = LumeType.button,
+                color = Color(LumePalette.FG),
+            )
+            Text(
+                text = stringResource(R.string.notif_rationale_body),
+                style = LumeType.body,
+                color = Color(LumePalette.FG),
+            )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                LumeButton(onClick = onDismiss, kind = LumeButtonKind.Ghost) {
+                    Text(text = stringResource(R.string.dismiss), style = LumeType.buttonSmall)
+                }
+                LumeButton(onClick = onConfirm, kind = LumeButtonKind.Ghost) {
+                    Text(text = stringResource(R.string.notif_rationale_allow), style = LumeType.buttonSmall)
+                }
+            }
+        }
+    }
 }
 
 private fun handlePrimary(
@@ -302,20 +378,11 @@ private fun Header(
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top,
+        verticalAlignment = Alignment.Bottom,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.app_name),
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF1C1B19),
-            )
-            Text(
-                text = stringResource(R.string.tagline),
-                color = Color(0xFF6D6962),
-                fontSize = 14.sp,
-            )
+            Text(text = stringResource(R.string.app_name), style = LumeType.display, color = Color(LumePalette.FG))
+            Text(text = stringResource(R.string.tagline), style = LumeType.tagline, color = Color(LumePalette.MUTED))
             Spacer(modifier = Modifier.height(8.dp))
             LocaleToggle(
                 selected = state.locale ?: AppLocale.PT,
@@ -326,7 +393,10 @@ private fun Header(
                 onSelect = { onAction(TimerAction.SetLocale(it)) },
             )
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             SoundToggle(
                 enabled = state.soundEnabled,
                 description = stringResource(if (state.soundEnabled) R.string.sound_off else R.string.sound_on),
@@ -337,8 +407,6 @@ private fun Header(
                 count = state.todayCount,
                 countLabel = pluralStringResource(R.plurals.session_word, state.todayCount),
                 countDescription = pluralStringResource(R.plurals.session_count, state.todayCount, state.todayCount),
-                cycleWorkCount = state.cycleWorkCount,
-                cycleDescription = stringResource(R.string.cycle_progress_cd, state.cycleWorkCount),
                 resetLabel = stringResource(R.string.reset_sessions),
                 resetEnabled = state.resetSessionsEnabled,
                 accent = accent,
@@ -351,62 +419,67 @@ private fun Header(
 @Composable
 private fun DialBlock(
     state: TimerUiState,
-    reducedMotion: Boolean,
     accent: Color,
-    modifier: Modifier = Modifier,
 ) {
     val status = stringResource(statusRes(state.status))
     val description = stringResource(R.string.remaining, status, state.timeText)
-    val maxDial = if (LocalConfiguration.current.screenWidthDp >= 600) 448.dp else 320.dp
-    Box(modifier = modifier.widthIn(max = maxDial), contentAlignment = Alignment.Center) {
+    val digitSize = timerDigitSizeSp(LocalConfiguration.current.screenWidthDp)
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
         Dial(
             remainingMs = state.remainingMs,
             totalMs = state.totalMs,
             running = state.isRunning,
-            reducedMotion = reducedMotion,
+            reducedMotion = LocalReducedMotion.current,
             accent = accent,
             modifier =
                 Modifier
-                    .fillMaxWidth()
+                    .fillMaxSize()
                     .semantics { contentDescription = description },
         )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (state.isRunning) {
-                    LiveDot(reducedMotion = reducedMotion, color = accent)
-                    Spacer(modifier = Modifier.size(8.dp))
-                }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatusDot(running = state.isRunning, color = accent)
                 Text(
                     text = status.uppercase(),
-                    color = accent,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.2.sp,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    color = Color(LumePalette.MUTED),
+                    style = LumeType.status,
                 )
             }
             Text(
                 text = state.timeText,
-                color = Color(0xFF1C1B19),
+                color = Color(LumePalette.FG),
                 textAlign = TextAlign.Center,
-                style =
-                    TextStyle(
-                        fontSize = 64.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFeatureSettings = "tnum, lnum",
-                    ),
+                style = LumeType.digits(digitSize),
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
     }
 }
 
 @Composable
-private fun LiveDot(
-    reducedMotion: Boolean,
+private fun StatusDot(
+    running: Boolean,
     color: Color,
 ) {
+    if (!running) {
+        Box(
+            modifier =
+                Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(Color(LumePalette.FG).copy(alpha = 0.20f)),
+        )
+        return
+    }
+    val reduced = LocalReducedMotion.current
     val scale =
-        if (reducedMotion) {
+        if (reduced) {
             1f
         } else {
             val transition = rememberInfiniteTransition(label = "liveDot")
@@ -415,21 +488,22 @@ private fun LiveDot(
                 targetValue = 0.82f,
                 animationSpec =
                     infiniteRepeatable(
-                        animation = tween(durationMillis = 900, easing = EaseSmoothOut),
+                        animation = tween(durationMillis = 1800, easing = EaseSmoothOut),
                         repeatMode = RepeatMode.Reverse,
                     ),
                 label = "liveDotScale",
             )
             animated
         }
+    val alpha = if (reduced) 1f else 0.4f + (scale - 0.82f) / 0.18f * 0.6f
     Box(
         modifier =
             Modifier
-                .size(8.dp)
+                .size(6.dp)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
-                    alpha = if (reducedMotion) 1f else 0.4f + (scale - 0.82f) / 0.18f * 0.6f
+                    this.alpha = alpha
                 }.clip(CircleShape)
                 .background(color),
     )
@@ -442,61 +516,65 @@ private fun Controls(
     onAction: (TimerAction) -> Unit,
 ) {
     val colors = LocalModeColors.current
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    val paused = state.primary == PrimaryControl.PAUSE
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            OutlinedButton(
+            LumeButton(
                 onClick = { onAction(TimerAction.Reset) },
-                modifier = Modifier.size(56.dp),
-                shape = CircleShape,
+                kind = LumeButtonKind.Reset,
+                accent = colors.accent,
+                description = stringResource(R.string.reset),
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Replay,
-                    contentDescription = stringResource(R.string.reset),
+                androidx.compose.material3.Icon(
+                    painter = painterResource(R.drawable.ic_lume_rotate_ccw),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
                 )
             }
-            Button(
+            LumeButton(
                 onClick = onPrimary,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                shape = RoundedCornerShape(50),
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = colors.button,
-                        contentColor = colors.onButton,
-                    ),
+                modifier = Modifier.weight(1f).height(56.dp),
+                kind = LumeButtonKind.Primary,
+                accent = colors.accent,
             ) {
-                Crossfade(targetState = state.primary, label = "primaryIcon") { primary ->
-                    Icon(
-                        imageVector =
-                            if (primary == PrimaryControl.PAUSE) {
-                                Icons.Filled.Pause
-                            } else {
-                                Icons.Filled.PlayArrow
-                            },
-                        contentDescription = null,
+                Box(modifier = Modifier.size(20.dp)) {
+                    LumeSwapIcon(
+                        visible = paused,
+                        painter = painterResource(R.drawable.ic_lume_pause),
+                        modifier = Modifier.size(20.dp),
+                    )
+                    LumeSwapIcon(
+                        visible = !paused,
+                        painter = painterResource(R.drawable.ic_lume_play),
+                        modifier = Modifier.size(20.dp),
+                        nudge = 2.dp,
                     )
                 }
                 Spacer(modifier = Modifier.size(8.dp))
-                Text(
-                    text = stringResource(primaryRes(state.primary)),
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Text(text = stringResource(primaryRes(state.primary)), style = LumeType.button)
             }
         }
         if (state.showSkip) {
-            TextButton(
+            LumeButton(
                 onClick = { onAction(TimerAction.SkipBreak) },
-                modifier = Modifier.minimumInteractiveComponentSize(),
+                kind = LumeButtonKind.Ghost,
+                accent = colors.accent,
             ) {
-                Icon(Icons.Filled.SkipNext, contentDescription = null)
+                androidx.compose.material3.Icon(
+                    painter = painterResource(R.drawable.ic_lume_skip),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
                 Spacer(modifier = Modifier.size(6.dp))
-                Text(text = stringResource(R.string.skip_break))
+                Text(text = stringResource(R.string.skip_break), style = LumeType.buttonSmall)
             }
         }
     }
@@ -508,59 +586,91 @@ private fun DurationCard(
     accent: Color,
     onAction: (TimerAction) -> Unit,
 ) {
-    Surface(
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .border(1.dp, Color(0x141C1B19), RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp),
-        color = Color(0xFFF5F4F1),
+                .lumeShadowBorder(CardShape),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            DurationStepper(
-                label = stringResource(R.string.work),
-                value = state.workMinutes,
-                unit = stringResource(R.string.minutes),
-                min = TimerEngine.WORK_MIN,
-                max = TimerEngine.WORK_MAX,
-                enabled = state.steppersEnabled,
-                active = state.mode == Mode.WORK,
-                accent = accent,
-                decreaseDescription = stringResource(R.string.decrease_work),
-                increaseDescription = stringResource(R.string.increase_work),
-                onDecrease = { onAction(TimerAction.SetWorkMinutes(state.workMinutes - 1)) },
-                onIncrease = { onAction(TimerAction.SetWorkMinutes(state.workMinutes + 1)) },
-            )
-            DurationStepper(
-                label = stringResource(R.string.break_label),
-                value = state.breakMinutes,
-                unit = stringResource(R.string.minutes),
-                min = TimerEngine.BREAK_MIN,
-                max = TimerEngine.BREAK_MAX,
-                enabled = state.steppersEnabled,
-                active = state.mode == Mode.BREAK,
-                accent = accent,
-                decreaseDescription = stringResource(R.string.decrease_break),
-                increaseDescription = stringResource(R.string.increase_break),
-                onDecrease = { onAction(TimerAction.SetBreakMinutes(state.breakMinutes - 1)) },
-                onIncrease = { onAction(TimerAction.SetBreakMinutes(state.breakMinutes + 1)) },
-            )
-            DurationStepper(
-                label = stringResource(R.string.long_break),
-                value = state.longBreakMinutes,
-                unit = stringResource(R.string.minutes),
-                min = TimerEngine.LONG_BREAK_MIN,
-                max = TimerEngine.LONG_BREAK_MAX,
-                enabled = state.steppersEnabled,
-                active = state.mode == Mode.LONG_BREAK,
-                accent = accent,
-                decreaseDescription = stringResource(R.string.decrease_long_break),
-                increaseDescription = stringResource(R.string.increase_long_break),
-                onDecrease = { onAction(TimerAction.SetLongBreakMinutes(state.longBreakMinutes - 1)) },
-                onIncrease = { onAction(TimerAction.SetLongBreakMinutes(state.longBreakMinutes + 1)) },
-            )
-        }
+        DurationStepper(
+            label = stringResource(R.string.work),
+            value = state.workMinutes,
+            unit = stringResource(R.string.minutes),
+            min = TimerEngine.WORK_MIN,
+            max = TimerEngine.WORK_MAX,
+            enabled = state.steppersEnabled,
+            active = state.mode == Mode.WORK,
+            accent = accent,
+            decreaseDescription = stringResource(R.string.decrease_work),
+            increaseDescription = stringResource(R.string.increase_work),
+            valueDescription = stringResource(R.string.edit_work_minutes),
+            onDecrease = { onAction(TimerAction.SetWorkMinutes(state.workMinutes - 1)) },
+            onIncrease = { onAction(TimerAction.SetWorkMinutes(state.workMinutes + 1)) },
+            onValueChange = { onAction(TimerAction.SetWorkMinutes(it)) },
+        )
+        HorizontalDivider(color = Color(LumePalette.DIVIDER), thickness = 1.dp)
+        DurationStepper(
+            label = stringResource(R.string.break_label),
+            value = state.breakMinutes,
+            unit = stringResource(R.string.minutes),
+            min = TimerEngine.BREAK_MIN,
+            max = TimerEngine.BREAK_MAX,
+            enabled = state.steppersEnabled,
+            active = state.mode == Mode.BREAK,
+            accent = accent,
+            decreaseDescription = stringResource(R.string.decrease_break),
+            increaseDescription = stringResource(R.string.increase_break),
+            valueDescription = stringResource(R.string.edit_break_minutes),
+            onDecrease = { onAction(TimerAction.SetBreakMinutes(state.breakMinutes - 1)) },
+            onIncrease = { onAction(TimerAction.SetBreakMinutes(state.breakMinutes + 1)) },
+            onValueChange = { onAction(TimerAction.SetBreakMinutes(it)) },
+        )
     }
+}
+
+internal data class PageSpacing(
+    val dialSide: Int,
+    val height: Int,
+    val gapBeforeDial: Int,
+    val gapAfterDial: Int,
+    val gapBeforeCard: Int,
+)
+
+internal fun pageSpacing(
+    viewportHeight: Int,
+    contentWidth: Int,
+    headerHeight: Int,
+    bannerHeight: Int,
+    controlsHeight: Int,
+    cardHeight: Int,
+    bannerGap: Int,
+    verticalPadding: Int,
+    baseGap: Int,
+    minDial: Int,
+    maxDial: Int,
+): PageSpacing {
+    val cap = minOf(contentWidth, maxDial).coerceAtLeast(1)
+    val chrome = verticalPadding * 2 + baseGap * 3 + bannerGap + headerHeight + bannerHeight + controlsHeight + cardHeight
+    val available = viewportHeight - chrome
+    val dialSide =
+        when {
+            available >= cap -> cap
+            available >= minDial -> available
+            else -> minOf(cap, minDial)
+        }
+    val contentHeight = chrome + dialSide
+    val height = maxOf(contentHeight, viewportHeight)
+    val extra = (height - contentHeight).coerceAtLeast(0)
+    val growBeforeDial = (extra * 0.45f).toInt()
+    val growAfterDial = (extra * 0.35f).toInt()
+    val growBeforeCard = extra - growBeforeDial - growAfterDial
+    return PageSpacing(
+        dialSide = dialSide,
+        height = height,
+        gapBeforeDial = baseGap + growBeforeDial,
+        gapAfterDial = baseGap + growAfterDial,
+        gapBeforeCard = baseGap + growBeforeCard,
+    )
 }
 
 private fun statusRes(status: TimerStatus): Int =
@@ -571,9 +681,6 @@ private fun statusRes(status: TimerStatus): Int =
         TimerStatus.BREAK -> R.string.break_label
         TimerStatus.RESTING -> R.string.resting
         TimerStatus.BREAK_PAUSED -> R.string.break_paused
-        TimerStatus.LONG_BREAK -> R.string.long_break
-        TimerStatus.LONG_RESTING -> R.string.long_resting
-        TimerStatus.LONG_BREAK_PAUSED -> R.string.long_break_paused
     }
 
 private fun primaryRes(primary: PrimaryControl): Int =
@@ -603,8 +710,4 @@ private fun rememberReducedMotion(): Boolean {
             1f,
         )
     return scale == 0f
-}
-
-private suspend fun withFrameNanos(onFrame: (Long) -> Unit) {
-    androidx.compose.runtime.withFrameNanos { onFrame(System.currentTimeMillis()) }
 }

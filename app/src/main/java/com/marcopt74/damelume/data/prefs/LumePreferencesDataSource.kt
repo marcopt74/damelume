@@ -41,8 +41,8 @@ class LumePreferencesDataSource
             dataStore.edit { prefs ->
                 prefs[KEY_WORK] = timer.workMinutes
                 prefs[KEY_BREAK] = timer.breakMinutes
-                prefs[KEY_LONG] = timer.longBreakMinutes
-                prefs[KEY_CYCLE] = timer.cycleWorkCount
+                prefs.remove(KEY_LONG)
+                prefs.remove(KEY_CYCLE)
                 prefs[KEY_MODE] = timer.mode.wireValue()
                 prefs[KEY_RUNNING] = timer.isRunning
                 prefs[KEY_REMAINING] = timer.remainingMs
@@ -77,17 +77,15 @@ class LumePreferencesDataSource
         }
 
         private fun Preferences.toPersisted(): PersistedState {
-            val mode = Mode.fromWire(this[KEY_MODE])
+            val storedMode = this[KEY_MODE]
             val timer =
                 TimerState(
-                    mode = mode,
+                    mode = Mode.fromWire(storedMode),
                     isRunning = this[KEY_RUNNING] ?: false,
                     remainingMs = this[KEY_REMAINING] ?: TimerState.DEFAULT_REMAINING_MS,
                     endsAtEpochMs = this[KEY_ENDS_AT],
                     workMinutes = this[KEY_WORK] ?: TimerState.DEFAULT_WORK_MINUTES,
                     breakMinutes = this[KEY_BREAK] ?: TimerState.DEFAULT_BREAK_MINUTES,
-                    longBreakMinutes = this[KEY_LONG] ?: TimerState.DEFAULT_LONG_BREAK_MINUTES,
-                    cycleWorkCount = this[KEY_CYCLE] ?: 0,
                 )
             val settings =
                 Settings(

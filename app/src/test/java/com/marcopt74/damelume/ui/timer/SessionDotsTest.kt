@@ -1,41 +1,36 @@
 package com.marcopt74.damelume.ui.timer
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
-import com.marcopt74.damelume.R
-import com.marcopt74.damelume.domain.TimerEngine
 import com.marcopt74.damelume.domain.model.TimerState
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
-@RunWith(RobolectricTestRunner::class)
 class SessionDotsTest {
     @Test
-    fun cycleWorkCount_zeroThroughFour_andDescription() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        for (count in 0..4) {
-            val ui =
-                TimerUiState.from(
-                    timer = TimerState(cycleWorkCount = count),
-                    nowMs = 0L,
-                    todayCount = 0,
-                    soundEnabled = true,
-                    locale = null,
-                )
-            assertThat(ui.cycleWorkCount).isEqualTo(count)
-            assertThat(context.getString(R.string.cycle_progress_cd, count)).isEqualTo("$count of 4 sessions in cycle")
-        }
-        val clamped =
+    fun dotsFollowTodayCountModFour() {
+        assertThat(TimerUiState.dotsFor(0)).isEqualTo(0)
+        assertThat(TimerUiState.dotsFor(1)).isEqualTo(1)
+        assertThat(TimerUiState.dotsFor(3)).isEqualTo(3)
+        assertThat(TimerUiState.dotsFor(4)).isEqualTo(4)
+        assertThat(TimerUiState.dotsFor(5)).isEqualTo(1)
+        assertThat(TimerUiState.dotsFor(8)).isEqualTo(4)
+        val ui =
             TimerUiState.from(
-                timer = TimerState(cycleWorkCount = 9),
+                timer = TimerState(),
+                nowMs = 0L,
+                todayCount = 4,
+                soundEnabled = true,
+                locale = null,
+            )
+        assertThat(ui.sessionDots).isEqualTo(4)
+        assertThat(ui.resetSessionsEnabled).isTrue()
+        val empty =
+            TimerUiState.from(
+                timer = TimerState(),
                 nowMs = 0L,
                 todayCount = 0,
                 soundEnabled = true,
                 locale = null,
             )
-        assertThat(clamped.cycleWorkCount).isEqualTo(TimerEngine.CYCLE_LENGTH)
-        assertThat(clamped.resetSessionsEnabled).isTrue()
+        assertThat(empty.resetSessionsEnabled).isFalse()
     }
 }

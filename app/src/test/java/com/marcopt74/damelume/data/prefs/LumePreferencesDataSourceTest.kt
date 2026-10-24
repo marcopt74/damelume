@@ -2,6 +2,7 @@ package com.marcopt74.damelume.data.prefs
 
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.edit
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.marcopt74.damelume.domain.model.AppLocale
@@ -20,35 +21,33 @@ class LumePreferencesDataSourceTest {
         runTest {
             val source = newSource("durations")
             source.writeTimer(
-                TimerState(workMinutes = 40, breakMinutes = 8, longBreakMinutes = 20),
+                TimerState(workMinutes = 40, breakMinutes = 8),
             )
             source.setSoundEnabled(false)
 
             val read = source.current()
             assertThat(read.timer.workMinutes).isEqualTo(40)
             assertThat(read.timer.breakMinutes).isEqualTo(8)
-            assertThat(read.timer.longBreakMinutes).isEqualTo(20)
             assertThat(read.settings.soundEnabled).isFalse()
         }
 
     @Test
-    fun persistsLongBreakAndCycle() =
+    fun storedLongBreakReloadsAsWork() =
         runTest {
-            val source = newSource("cycle")
-            source.writeTimer(
-                TimerState(
-                    mode = Mode.LONG_BREAK,
-                    longBreakMinutes = 22,
-                    cycleWorkCount = 4,
-                    remainingMs = 22 * 60_000L,
-                ),
-            )
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val file = File(context.filesDir, "legacy-long.preferences_pb")
+            val store = PreferenceDataStoreFactory.create { file }
+            store.edit { prefs ->
+                prefs[LumePreferencesDataSource.KEY_MODE] = "long_break"
+                prefs[LumePreferencesDataSource.KEY_RUNNING] = true
+                prefs[LumePreferencesDataSource.KEY_REMAINING] = 15 * 60_000L
+            }
+            val source = LumePreferencesDataSource(store)
             source.setLocale(AppLocale.EN)
 
             val read = source.current()
-            assertThat(read.timer.longBreakMinutes).isEqualTo(22)
-            assertThat(read.timer.cycleWorkCount).isEqualTo(4)
-            assertThat(read.timer.mode).isEqualTo(Mode.LONG_BREAK)
+            assertThat(read.timer.mode).isEqualTo(Mode.WORK)
+            assertThat(read.timer.isRunning).isTrue()
             assertThat(read.settings.locale).isEqualTo(AppLocale.EN)
         }
 

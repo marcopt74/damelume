@@ -13,9 +13,6 @@ enum class TimerStatus {
     BREAK,
     RESTING,
     BREAK_PAUSED,
-    LONG_BREAK,
-    LONG_RESTING,
-    LONG_BREAK_PAUSED,
 }
 
 enum class PrimaryControl {
@@ -35,13 +32,12 @@ data class TimerUiState(
     val status: TimerStatus = TimerStatus.WORK,
     val primary: PrimaryControl = PrimaryControl.START,
     val showSkip: Boolean = false,
-    val cycleWorkCount: Int = 0,
     val todayCount: Int = 0,
+    val sessionDots: Int = 0,
     val resetSessionsEnabled: Boolean = false,
     val soundEnabled: Boolean = true,
     val workMinutes: Int = TimerState.DEFAULT_WORK_MINUTES,
     val breakMinutes: Int = TimerState.DEFAULT_BREAK_MINUTES,
-    val longBreakMinutes: Int = TimerState.DEFAULT_LONG_BREAK_MINUTES,
     val steppersEnabled: Boolean = true,
     val showNotificationBanner: Boolean = false,
     val showNotificationRationale: Boolean = false,
@@ -50,6 +46,12 @@ data class TimerUiState(
     val locale: AppLocale? = null,
 ) {
     companion object {
+        fun dotsFor(count: Int): Int {
+            if (count <= 0) return 0
+            val remainder = count % 4
+            return if (remainder == 0) 4 else remainder
+        }
+
         fun from(
             timer: TimerState,
             nowMs: Long,
@@ -81,14 +83,13 @@ data class TimerUiState(
                 timeText = TimeFormatter.format(remaining),
                 status = status,
                 primary = primary,
-                showSkip = timer.mode == Mode.BREAK || timer.mode == Mode.LONG_BREAK,
-                cycleWorkCount = timer.cycleWorkCount.coerceIn(0, TimerEngine.CYCLE_LENGTH),
+                showSkip = timer.mode == Mode.BREAK,
                 todayCount = todayCount,
-                resetSessionsEnabled = todayCount > 0 || timer.cycleWorkCount > 0,
+                sessionDots = dotsFor(todayCount),
+                resetSessionsEnabled = todayCount > 0,
                 soundEnabled = soundEnabled,
                 workMinutes = timer.workMinutes,
                 breakMinutes = timer.breakMinutes,
-                longBreakMinutes = timer.longBreakMinutes,
                 steppersEnabled = !timer.isRunning,
                 showNotificationBanner = showNotificationBanner,
                 showNotificationRationale = showNotificationRationale,
@@ -115,12 +116,6 @@ data class TimerUiState(
                         running -> TimerStatus.RESTING
                         midPause -> TimerStatus.BREAK_PAUSED
                         else -> TimerStatus.BREAK
-                    }
-                Mode.LONG_BREAK ->
-                    when {
-                        running -> TimerStatus.LONG_RESTING
-                        midPause -> TimerStatus.LONG_BREAK_PAUSED
-                        else -> TimerStatus.LONG_BREAK
                     }
             }
     }

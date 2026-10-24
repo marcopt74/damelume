@@ -6,21 +6,16 @@ import org.junit.Test
 
 class ThemeTest {
     @Test
-    fun breakModeUsesOrangeAccent() {
-        assertThat(LumePalette.graphic(Mode.BREAK)).isEqualTo(0xFFE5631A.toInt())
-        assertThat(LumePalette.button(Mode.BREAK)).isEqualTo(0xFFC2410C.toInt())
+    fun breakModeUsesSiteOrange() {
+        assertThat(LumePalette.accent(Mode.BREAK)).isEqualTo(0xFFEF6C1C.toInt())
         assertThat(LumePalette.soft(Mode.BREAK)).isEqualTo(LumePalette.BREAK_SOFT)
     }
 
     @Test
-    fun modeAccents_work_break_longBreak() {
-        assertThat(LumePalette.graphic(Mode.WORK)).isEqualTo(0xFF2F6DF6.toInt())
-        assertThat(LumePalette.button(Mode.WORK)).isEqualTo(0xFF2F6DF6.toInt())
-        assertThat(LumePalette.text(Mode.WORK)).isEqualTo(0xFF2558CC.toInt())
-        assertThat(LumePalette.graphic(Mode.BREAK)).isEqualTo(0xFFE5631A.toInt())
-        assertThat(LumePalette.graphic(Mode.LONG_BREAK)).isEqualTo(0xFF3E584A.toInt())
-        assertThat(LumePalette.button(Mode.LONG_BREAK)).isEqualTo(0xFF3E584A.toInt())
-        assertThat(LumePalette.text(Mode.LONG_BREAK)).isEqualTo(0xFF3E584A.toInt())
+    fun modeAccents_workAndBreakShareOneAccent() {
+        assertThat(LumePalette.accent(Mode.WORK)).isEqualTo(0xFF2F6DF6.toInt())
+        assertThat(LumePalette.accent(Mode.BREAK)).isEqualTo(0xFFEF6C1C.toInt())
+        assertThat(LumePalette.soft(Mode.WORK)).isEqualTo(LumePalette.WORK_SOFT)
     }
 
     @Test
@@ -30,6 +25,8 @@ class ThemeTest {
             assertThat(LumePalette.runningBackground(mode)).isEqualTo(expected)
         }
         val work = LumePalette.runningBackground(Mode.WORK)
-        assertThat((work shr 16) and 0xFF).isGreaterThan(0xE0)
+        assertThat((work shr 16) and 0xFF).isEqualTo(0xEE)
+        assertThat((work shr 8) and 0xFF).isEqualTo(0xF4)
+        assertThat(work and 0xFF).isEqualTo(0xFF)
     }
 }

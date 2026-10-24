@@ -90,14 +90,8 @@ class AndroidTimerNotifier
 
         private fun paused(state: TimerState): android.app.Notification {
             val time = TimeFormatter.format(state.remainingMs)
-            val title =
-                if (state.mode == Mode.LONG_BREAK) {
-                    context.getString(R.string.notif_paused_long_break, time)
-                } else {
-                    context.getString(pausedTitle(state.mode))
-                }
             return base(NotificationChannels.TIMER_RUNNING)
-                .setContentTitle(title)
+                .setContentTitle(context.getString(pausedTitle(state.mode)))
                 .setContentText(time)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
@@ -160,35 +154,30 @@ class AndroidTimerNotifier
                 when (mode) {
                     Mode.WORK -> R.string.working
                     Mode.BREAK -> R.string.resting
-                    Mode.LONG_BREAK -> R.string.long_resting
                 }
 
             fun pausedTitle(mode: Mode): Int =
                 when (mode) {
                     Mode.WORK -> R.string.paused
                     Mode.BREAK -> R.string.break_paused
-                    Mode.LONG_BREAK -> R.string.long_break_paused
                 }
 
             fun modeName(mode: Mode): Int =
                 when (mode) {
                     Mode.WORK -> R.string.work
                     Mode.BREAK -> R.string.break_label
-                    Mode.LONG_BREAK -> R.string.long_break
                 }
 
             fun titleFor(finished: Mode): Int =
                 when (finished) {
                     Mode.WORK -> R.string.notif_work_done_title
                     Mode.BREAK -> R.string.notif_break_done_title
-                    Mode.LONG_BREAK -> R.string.notif_long_break_done_title
                 }
 
             fun bodyForNext(next: Mode): Int =
                 when (next) {
                     Mode.WORK -> R.string.notif_work_next
                     Mode.BREAK -> R.string.notif_break_next
-                    Mode.LONG_BREAK -> R.string.notif_long_break_next
                 }
         }
     }

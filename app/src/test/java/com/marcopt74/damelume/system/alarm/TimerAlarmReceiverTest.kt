@@ -45,7 +45,7 @@ class TimerAlarmReceiverTest {
             val preferences = preferences("alarm-once")
             val endsAt = 5_000L
             preferences.writeTimer(
-                TimerState(mode = Mode.WORK, isRunning = true, endsAtEpochMs = endsAt, remainingMs = 1, cycleWorkCount = 1),
+                TimerState(mode = Mode.WORK, isRunning = true, endsAtEpochMs = endsAt, remainingMs = 1),
             )
             val repository = repository(preferences, clock)
             val handler = TimerAlarmHandler(repository)
@@ -60,7 +60,7 @@ class TimerAlarmReceiverTest {
         }
 
     @Test
-    fun fourthWork_whileDead_entersLongBreak() =
+    fun fourthWork_whileDead_entersBreak() =
         runTest {
             val endsAt = 9_000L
             val clock = MutableClock(now = endsAt)
@@ -71,7 +71,6 @@ class TimerAlarmReceiverTest {
                     isRunning = true,
                     endsAtEpochMs = endsAt,
                     remainingMs = 1,
-                    cycleWorkCount = 3,
                 ),
             )
             val handler = TimerAlarmHandler(repository(preferences, clock))
@@ -79,8 +78,7 @@ class TimerAlarmReceiverTest {
             handler.onAlarm(endsAt)
 
             val timer = preferences.current().timer
-            assertThat(timer.mode).isEqualTo(Mode.LONG_BREAK)
-            assertThat(timer.cycleWorkCount).isEqualTo(4)
+            assertThat(timer.mode).isEqualTo(Mode.BREAK)
             assertThat(timer.isRunning).isFalse()
         }
 

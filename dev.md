@@ -47,20 +47,18 @@ CI (`.github/workflows/ci.yml`) runs `./gradlew lint testDebugUnitTest assembleD
 | AC-31 | Retained state in `TimerTestActivity` | `TimerScreenTest.stateSurvivesRecreation` |
 | AC-32 | `LocaleToggle`, `AndroidLocaleApplicator` (`AppCompatDelegate.setApplicationLocales`) | `LocaleToggleTest.switchesStrings_andPersists`, `StringsParityTest` |
 | AC-33 | Dial content description `remaining`; icon descriptions; toggle/radio roles | `TimerScreenA11yTest.controlsExposeNamesStateAndTouchTargets` |
-| AC-34 | `minimumInteractiveComponentSize` / `sizeIn(48.dp)` on controls | `TimerScreenA11yTest.controlsExposeNamesStateAndTouchTargets` |
-| AC-35 | `LumePalette` contrast variants | `ContrastTest` |
+| AC-34 | Reference control sizes: locale 28dp, stepper 36dp, sound 44dp, reset 56dp | `TimerScreenA11yTest.controlsExposeNamesStateAndTouchTargets` |
+| AC-35 | `LumePalette` contrast for work and muted text; break accent is the site orange | `ContrastTest` |
 | AC-36 | `reducedMotion` skips the frame loop and the live-dot pulse | `DialTest.reducedMotion_noContinuousAnimation` |
-| AC-37 | Work `#2F6DF6`, break orange variants, long break `#3E584A`, running background 70% soft | `ThemeTest.breakModeUsesOrangeAccent`, `modeAccents_work_break_longBreak`, `runningBackgroundBlend` |
+| AC-37 | Work `#2F6DF6`, break `#EF6C1C`, running background 70% soft | `ThemeTest.breakModeUsesSiteOrange`, `modeAccents_workAndBreakShareOneAccent`, `runningBackgroundBlend` |
 | AC-38 | Space on the focused root | `TimerScreenTest.spaceKeyToggles` |
-| AC-39 | Fourth work completion → long break, cycle 4 | `TimerEngineTest.completeFourthWork_goesToLongBreak_cycle4` |
-| AC-40 | Long break completion → work stopped, cycle 0, Room `LONG_BREAK` | `TimerEngineTest.completeLongBreak_resetsCycle_noAutoStart` |
-| AC-41 | Skip long break | `TimerEngineTest.skipLongBreak_resetsCycle`, `TimerScreenTest.skipBreak_visibleInLongBreak`, `TimerRepositoryTest.skipLongBreak_cancelsAlarmAndOngoing` |
-| AC-42 | Long break 1–60, persisted | `TimerEngineTest.setLongBreak_clamps_1_60`, `setLongBreak_resetsRemainingWhenCurrentAndStopped`, `LumePreferencesDataSourceTest.persistsLongBreakAndCycle` |
-| AC-43 | Long-break status strings and dial description | `TimerScreenTest.longBreakLabels_ptAndEn`, `TimerScreenA11yTest.dialDescription_longBreak` |
-| AC-44 | Completion copy for the long break | `TimerNotifierTest.completion_longBreakTexts` |
-| AC-45 | Reset sessions during a long break returns to work and cancels alarm/notification | `TimerEngineTest.resetSessions_inLongBreak_returnsToWork`, `TimerRepositoryTest.resetSessions_inLongBreak_cancelsAlarm` |
-| AC-46 | Cycle is not derived from Room and is not cleared on a new day | `TimerEngineTest.reconcile_newDay_keepsCycle_resetsDaily` |
-| AC-47 | `repairCycle`; dead-process alarm; boot of a future long break | `TimerEngineTest.reconcile_repairsCycleInvariant`, `reconcile_longBreakPast_resetsCycle`, `TimerAlarmReceiverTest.fourthWork_whileDead_entersLongBreak`, `BootReceiverTest.longBreak_reschedules` |
+| AC-39 | Every work completion enters a stopped break, including the fourth | `TimerEngineTest.completeFourthWork_stillEntersBreak`, `TimerAlarmReceiverTest.fourthWork_whileDead_entersBreak` |
+| AC-40 | Session dots are today's count mod 4, with 4 filled on a multiple of 4 | `SessionDotsTest.dotsFollowTodayCountModFour` |
+| AC-41 | Skip break returns to stopped work and cancels alarm | `TimerEngineTest.skipBreak`, `TimerRepositoryTest.skipBreak_cancelsAlarmAndOngoing` |
+| AC-42 | Reset sessions zeros today's count and keeps the current phase | `TimerEngineTest.resetSessions_keepsPhase`, `TimerRepositoryTest.resetSessions_keepsHistory` |
+| AC-43 | Break status strings and dial description | `TimerScreenTest.breakLabels_ptAndEn`, `TimerScreenA11yTest.dialDescription_break` |
+| AC-44 | A stored `long_break` mode reloads as work | `LumePreferencesDataSourceTest.storedLongBreakReloadsAsWork` |
+| AC-45 | Boot of a future break reschedules | `BootReceiverTest.break_reschedules` |
 
 Chime asset: `tools/gen_chime.py` writes `app/src/test/resources/lume_chime.wav` and `app/src/main/res/raw/lume_chime.ogg`. `ChimeAssetTest` checks the raw resource, WAV duration (1.0–1.1 s) and dominant frequencies 523.25 / 659.25 / 783.99 Hz.
 
@@ -68,10 +66,11 @@ Fonts: Fraunces and Outfit under `app/src/main/res/font/`. SIL OFL texts are in 
 
 ## Deviations
 
-- Work text on the running background uses `#2558CC`. Break button/text uses `#C2410C` and break graphics `#E5631A`. These are the contrast corrections in spec §7.
+- The screen matches https://da-melume.grok.me: one accent per mode (`#2F6DF6` work, `#EF6C1C` break), Outfit for UI text, Fraunces only for the word Lume, Lucide stroke icons, and a single column. White on `#EF6C1C` is the site button and is below WCAG AA.
+- There is no long break. Work and break alternate. The four dots follow today's completed work count. A stored `long_break` value reloads as work and keeps its remaining time and alarm so the pending intent can still be cancelled or completed.
 - `local_date` is the local date of `endedAt` (the scheduled end), so a work session that ends before midnight stays on that day even if the process reconciles after midnight. The daily counter therefore follows AC-11/AC-28 rather than counting that session on the new day.
 - The next phase never auto-starts.
-- First launch follows the system language (`pt*` → PT, otherwise EN). The reference site forces Portuguese.
+- First launch is Portuguese, matching the reference site. The in-app toggle still persists EN or PT.
 - Receiver unit tests drive `TimerAlarmHandler`, `NotificationActionHandler` and `BootHandler` (the code the receivers call) instead of a Hilt-injected `BroadcastReceiver`, so they run on the JVM without `@HiltAndroidTest`.
 - `TimerViewModelTest.remainingDerivedFromEndsAt` asserts `TimerUiState.from`, which is the mapping the ViewModel's `combine` uses.
 - `android.newDsl=false` and `android.builtInKotlin=false` keep the classic Android Gradle DSL so ktlint, detekt and Hilt keep working on AGP 9. Both flags are removed in AGP 10.
@@ -79,4 +78,4 @@ Fonts: Fraunces and Outfit under `app/src/main/res/font/`. SIL OFL texts are in 
 
 ## Follow-ups
 
-Manual QA from spec §8 is not in CI: forced Doze, reboot with a running timer, force-stop then reopen, TalkBack end to end (R7). Play review of `USE_EXACT_ALARM` (R1), aggressive OEM alarm delays (R2), a dismissible ongoing notification on Android 14+ (R3), manual clock changes (R4) and the revisable long-break rules (R8) are unchanged from the spec.
+Manual QA from spec §8 is not in CI: forced Doze, reboot with a running timer, force-stop then reopen, TalkBack end to end (R7). Play review of `USE_EXACT_ALARM` (R1), aggressive OEM alarm delays (R2), a dismissible ongoing notification on Android 14+ (R3), and manual clock changes (R4) are unchanged from the spec.

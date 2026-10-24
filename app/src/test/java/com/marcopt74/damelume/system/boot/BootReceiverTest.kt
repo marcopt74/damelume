@@ -46,7 +46,7 @@ class BootReceiverTest {
             val clock = MutableClock(now = 10_000)
             val preferences = preferences("boot-future")
             preferences.writeTimer(
-                TimerState(mode = Mode.WORK, isRunning = true, endsAtEpochMs = futureEnds, remainingMs = 40_000, cycleWorkCount = 1),
+                TimerState(mode = Mode.WORK, isRunning = true, endsAtEpochMs = futureEnds, remainingMs = 40_000),
             )
             val alarm = RecordingAlarmScheduler()
             val handler = BootHandler(repository(preferences, clock, alarm, RecordingNotifier()))
@@ -73,18 +73,17 @@ class BootReceiverTest {
         }
 
     @Test
-    fun longBreak_reschedules() =
+    fun break_reschedules() =
         runTest {
             val endsAt = 80_000L
             val clock = MutableClock(now = 20_000)
-            val preferences = preferences("boot-long")
+            val preferences = preferences("boot-break")
             preferences.writeTimer(
                 TimerState(
-                    mode = Mode.LONG_BREAK,
+                    mode = Mode.BREAK,
                     isRunning = true,
                     endsAtEpochMs = endsAt,
                     remainingMs = 60_000,
-                    cycleWorkCount = 4,
                 ),
             )
             val alarm = RecordingAlarmScheduler()
@@ -92,8 +91,7 @@ class BootReceiverTest {
                 .onBroadcast(Intent.ACTION_BOOT_COMPLETED)
 
             val timer = preferences.current().timer
-            assertThat(timer.mode).isEqualTo(Mode.LONG_BREAK)
-            assertThat(timer.cycleWorkCount).isEqualTo(4)
+            assertThat(timer.mode).isEqualTo(Mode.BREAK)
             assertThat(timer.isRunning).isTrue()
             assertThat(alarm.scheduled).contains(endsAt)
         }

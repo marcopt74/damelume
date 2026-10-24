@@ -6,28 +6,21 @@ import org.junit.Test
 
 class ContrastTest {
     @Test
-    fun textPairsMeetAaAndGraphicsMeetThreeToOne() {
-        assertText(LumePalette.WHITE, LumePalette.button(Mode.WORK))
-        assertText(LumePalette.text(Mode.WORK), LumePalette.WHITE)
-        assertText(LumePalette.text(Mode.WORK), LumePalette.runningBackground(Mode.WORK))
-        assertGraphic(LumePalette.graphic(Mode.WORK), LumePalette.runningBackground(Mode.WORK))
-        assertGraphic(LumePalette.graphic(Mode.WORK), LumePalette.WHITE)
-
-        assertText(LumePalette.WHITE, LumePalette.button(Mode.BREAK))
-        assertText(LumePalette.text(Mode.BREAK), LumePalette.runningBackground(Mode.BREAK))
-        assertText(LumePalette.text(Mode.BREAK), LumePalette.WHITE)
-        assertGraphic(LumePalette.graphic(Mode.BREAK), LumePalette.runningBackground(Mode.BREAK))
-        assertGraphic(LumePalette.graphic(Mode.BREAK), LumePalette.WHITE)
-
-        assertText(LumePalette.WHITE, LumePalette.button(Mode.LONG_BREAK))
-        assertText(LumePalette.text(Mode.LONG_BREAK), LumePalette.WHITE)
-        assertText(LumePalette.text(Mode.LONG_BREAK), LumePalette.runningBackground(Mode.LONG_BREAK))
-        assertGraphic(LumePalette.graphic(Mode.LONG_BREAK), LumePalette.runningBackground(Mode.LONG_BREAK))
-
+    fun workAndMutedTextMeetAa() {
+        assertText(LumePalette.WHITE, LumePalette.accent(Mode.WORK))
         assertText(LumePalette.MUTED, LumePalette.WHITE)
-        Mode.entries.forEach { mode ->
-            assertText(LumePalette.MUTED, LumePalette.runningBackground(mode))
-        }
+        assertText(LumePalette.MUTED, LumePalette.runningBackground(Mode.WORK))
+        assertText(LumePalette.MUTED, LumePalette.runningBackground(Mode.BREAK))
+        assertGraphic(LumePalette.accent(Mode.WORK), LumePalette.WHITE)
+        assertGraphic(LumePalette.accent(Mode.WORK), LumePalette.runningBackground(Mode.WORK))
+    }
+
+    @Test
+    fun breakAccentMatchesTheSiteAndIsBelowAa() {
+        assertThat(LumePalette.accent(Mode.BREAK)).isEqualTo(0xFFEF6C1C.toInt())
+        val ratio = LumePalette.contrastRatio(LumePalette.WHITE, LumePalette.accent(Mode.BREAK))
+        assertThat(ratio).isWithin(0.02).of(3.07)
+        assertThat(ratio).isLessThan(4.5)
     }
 
     private fun assertText(

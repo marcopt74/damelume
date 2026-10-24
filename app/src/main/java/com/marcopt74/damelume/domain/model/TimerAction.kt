@@ -23,10 +23,6 @@ sealed interface TimerAction {
         val minutes: Int,
     ) : TimerAction
 
-    data class SetLongBreakMinutes(
-        val minutes: Int,
-    ) : TimerAction
-
     data object Reconcile : TimerAction
 
     data class SetSoundEnabled(

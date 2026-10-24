@@ -48,7 +48,7 @@ class NotificationActionReceiverTest {
             val handler = NotificationActionHandler(repository(preferences))
             val endsAt = clock.now + 60_000
             preferences.writeTimer(
-                TimerState(mode = Mode.BREAK, isRunning = true, endsAtEpochMs = endsAt, remainingMs = 60_000, cycleWorkCount = 1),
+                TimerState(mode = Mode.BREAK, isRunning = true, endsAtEpochMs = endsAt, remainingMs = 60_000),
             )
 
             handler.handle(NotificationActionReceiver.ACTION_PAUSE)
@@ -68,12 +68,11 @@ class NotificationActionReceiverTest {
             assertThat(timer.remainingMs).isEqualTo(timer.breakMinutes * 60_000L)
 
             preferences.writeTimer(
-                TimerState(mode = Mode.LONG_BREAK, isRunning = true, endsAtEpochMs = clock.now + 1_000, cycleWorkCount = 4),
+                TimerState(mode = Mode.BREAK, isRunning = true, endsAtEpochMs = clock.now + 1_000),
             )
             handler.handle(NotificationActionReceiver.ACTION_SKIP)
             timer = preferences.current().timer
             assertThat(timer.mode).isEqualTo(Mode.WORK)
-            assertThat(timer.cycleWorkCount).isEqualTo(0)
             assertThat(timer.isRunning).isFalse()
             assertThat(notifier.cancelCount).isAtLeast(1)
         }

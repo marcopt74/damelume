@@ -21,27 +21,19 @@
     <string name="remaining">%1$s, %2$s restantes</string>
     <string name="decrease_work">Diminuir trabalho</string>
     <string name="increase_work">Aumentar trabalho</string>
+    <string name="edit_work_minutes">Editar minutos de trabalho</string>
     <string name="decrease_break">Diminuir pausa</string>
     <string name="increase_break">Aumentar pausa</string>
+    <string name="edit_break_minutes">Editar minutos de pausa</string>
     <string name="window_title">%1$s · %2$s — Lume</string>
     <string name="locale_pt">PT</string>
     <string name="locale_en">EN</string>
     <string name="dismiss">Fechar</string>
 
-    <!-- new, not in reference -->
-    <string name="long_break">Pausa longa</string>
-    <string name="long_resting">Em pausa longa</string>
-    <string name="long_break_paused">Pausa longa interrompida</string>
-    <string name="decrease_long_break">Diminuir pausa longa</string>
-    <string name="increase_long_break">Aumentar pausa longa</string>
-    <string name="cycle_progress_cd">%1$d de 4 sessões no ciclo</string>
     <string name="notif_work_done_title">Trabalho concluído</string>
     <string name="notif_break_done_title">Pausa concluída</string>
-    <string name="notif_long_break_done_title">Pausa longa concluída</string>
     <string name="notif_break_next">Hora da pausa · %1$d min</string>
-    <string name="notif_long_break_next">Hora da pausa longa · %1$d min</string>
     <string name="notif_work_next">Pronto para trabalhar · %1$d min</string>
-    <string name="notif_paused_long_break">Pausa longa interrompida · %1$s</string>
     <string name="channel_timer_running">Timer em curso</string>
     <string name="channel_session_complete">Fim de sessão</string>
     <string name="channel_session_complete_silent">Fim de sessão (silencioso)</string>

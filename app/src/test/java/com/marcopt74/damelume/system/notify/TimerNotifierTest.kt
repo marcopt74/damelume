@@ -41,21 +41,6 @@ class TimerNotifierTest {
     }
 
     @Test
-    fun completion_longBreakTexts() {
-        notifier.showCompletion(Mode.WORK, Mode.LONG_BREAK, nextMinutes = 15, soundEnabled = true)
-        val intoLong = notification(AndroidTimerNotifier.COMPLETE_ID)
-        assertThat(intoLong.extras.getString(Notification.EXTRA_TITLE)).isEqualTo("Work session over")
-        assertThat(intoLong.extras.getString(Notification.EXTRA_TEXT)).isEqualTo("Time for a long break · 15 min")
-        assertThat(intoLong.channelId).isEqualTo(NotificationChannels.SESSION_COMPLETE)
-
-        notifier.showCompletion(Mode.LONG_BREAK, Mode.WORK, nextMinutes = 25, soundEnabled = false)
-        val outOfLong = notification(AndroidTimerNotifier.COMPLETE_ID)
-        assertThat(outOfLong.extras.getString(Notification.EXTRA_TITLE)).isEqualTo("Long break over")
-        assertThat(outOfLong.extras.getString(Notification.EXTRA_TEXT)).isEqualTo("Ready to work · 25 min")
-        assertThat(outOfLong.channelId).isEqualTo(NotificationChannels.SESSION_COMPLETE_SILENT)
-    }
-
-    @Test
     fun ongoing_runningHasChronometerCountdownAndActions() {
         val endsAt = 1_700_000_000_000L
         notifier.showOngoing(
@@ -71,12 +56,12 @@ class TimerNotifierTest {
         assertThat(titles).containsExactly(context.getString(R.string.pause), context.getString(R.string.reset)).inOrder()
 
         notifier.showOngoing(
-            TimerState(mode = Mode.LONG_BREAK, isRunning = true, endsAtEpochMs = endsAt, cycleWorkCount = 4),
+            TimerState(mode = Mode.BREAK, isRunning = true, endsAtEpochMs = endsAt),
         )
-        val longBreak = notification(AndroidTimerNotifier.ONGOING_ID)
-        assertThat(longBreak.extras.getString(Notification.EXTRA_TITLE))
-            .isEqualTo(context.getString(R.string.long_resting))
-        assertThat(longBreak.actions.map { it.title.toString() }).contains(context.getString(R.string.skip_break))
+        val onBreak = notification(AndroidTimerNotifier.ONGOING_ID)
+        assertThat(onBreak.extras.getString(Notification.EXTRA_TITLE))
+            .isEqualTo(context.getString(R.string.resting))
+        assertThat(onBreak.actions.map { it.title.toString() }).contains(context.getString(R.string.skip_break))
     }
 
     @Test
@@ -92,16 +77,16 @@ class TimerNotifierTest {
 
         notifier.showOngoing(
             TimerState(
-                mode = Mode.LONG_BREAK,
+                mode = Mode.BREAK,
                 isRunning = false,
                 remainingMs = 90_000,
-                longBreakMinutes = 15,
-                cycleWorkCount = 4,
+                breakMinutes = 15,
             ),
         )
-        val longPaused = notification(AndroidTimerNotifier.ONGOING_ID)
-        assertThat(longPaused.extras.getString(Notification.EXTRA_TITLE)).contains("01:30")
-        assertThat(longPaused.actions.map { it.title.toString() }).doesNotContain(context.getString(R.string.skip_break))
+        val breakPaused = notification(AndroidTimerNotifier.ONGOING_ID)
+        assertThat(breakPaused.extras.getString(Notification.EXTRA_TITLE))
+            .isEqualTo(context.getString(R.string.break_paused))
+        assertThat(breakPaused.actions.map { it.title.toString() }).doesNotContain(context.getString(R.string.skip_break))
     }
 
     @Test

@@ -72,13 +72,14 @@ class TimerRepositoryTest {
                     lateCompletion = false,
                 ),
             )
-            preferences.writeTimer(TimerState(cycleWorkCount = 2))
+            preferences.writeTimer(TimerState(mode = Mode.BREAK, isRunning = true))
 
             repository.dispatch(TimerAction.ResetSessions)
 
             assertThat(database.completedSessionDao().countAll()).isEqualTo(1)
             assertThat(repository.todayCount.first()).isEqualTo(0)
-            assertThat(preferences.current().timer.cycleWorkCount).isEqualTo(0)
+            assertThat(preferences.current().timer.mode).isEqualTo(Mode.BREAK)
+            assertThat(preferences.current().timer.isRunning).isTrue()
         }
 
     @Test
@@ -124,16 +125,15 @@ class TimerRepositoryTest {
         }
 
     @Test
-    fun skipLongBreak_cancelsAlarmAndOngoing() =
+    fun skipBreak_cancelsAlarmAndOngoing() =
         runTest {
             val endsAt = clock.now + 60_000
             preferences.writeTimer(
                 TimerState(
-                    mode = Mode.LONG_BREAK,
+                    mode = Mode.BREAK,
                     isRunning = true,
                     endsAtEpochMs = endsAt,
                     remainingMs = 60_000,
-                    cycleWorkCount = 4,
                 ),
             )
 
@@ -141,37 +141,10 @@ class TimerRepositoryTest {
 
             val timer = preferences.current().timer
             assertThat(timer.mode).isEqualTo(Mode.WORK)
-            assertThat(timer.cycleWorkCount).isEqualTo(0)
             assertThat(timer.isRunning).isFalse()
             assertThat(alarm.cancelled).contains(endsAt)
             assertThat(notifier.cancelCount).isAtLeast(1)
             assertThat(notifier.ongoing).isNull()
-        }
-
-    @Test
-    fun resetSessions_inLongBreak_cancelsAlarm() =
-        runTest {
-            val endsAt = clock.now + 30_000
-            preferences.writeTimer(
-                TimerState(
-                    mode = Mode.LONG_BREAK,
-                    isRunning = true,
-                    endsAtEpochMs = endsAt,
-                    remainingMs = 30_000,
-                    cycleWorkCount = 4,
-                    workMinutes = 25,
-                ),
-            )
-
-            repository.dispatch(TimerAction.ResetSessions)
-
-            val timer = preferences.current().timer
-            assertThat(timer.mode).isEqualTo(Mode.WORK)
-            assertThat(timer.isRunning).isFalse()
-            assertThat(timer.cycleWorkCount).isEqualTo(0)
-            assertThat(timer.remainingMs).isEqualTo(25 * 60_000L)
-            assertThat(alarm.cancelled).contains(endsAt)
-            assertThat(notifier.cancelCount).isAtLeast(1)
         }
 
     private fun repository(alarm: RecordingAlarmScheduler = this.alarm): TimerRepository =

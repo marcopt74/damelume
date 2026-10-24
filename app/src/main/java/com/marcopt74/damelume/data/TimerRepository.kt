@@ -7,6 +7,7 @@ import com.marcopt74.damelume.data.prefs.PersistedState
 import com.marcopt74.damelume.domain.Clock
 import com.marcopt74.damelume.domain.TimerEngine
 import com.marcopt74.damelume.domain.model.AlarmCommand
+import com.marcopt74.damelume.domain.model.AppLocale
 import com.marcopt74.damelume.domain.model.EngineResult
 import com.marcopt74.damelume.domain.model.Mode
 import com.marcopt74.damelume.domain.model.OngoingCommand
@@ -82,7 +83,7 @@ class TimerRepository
             mutex.withLock {
                 if (localeApplicator.current() != null) return
                 val stored = preferences.current().settings.locale
-                val chosen = stored ?: localeApplicator.initialFromSystem()
+                val chosen = stored ?: AppLocale.PT
                 preferences.setLocale(chosen)
                 localeApplicator.apply(chosen)
             }
@@ -144,7 +145,6 @@ class TimerRepository
             when (state.mode) {
                 Mode.WORK -> state.workMinutes
                 Mode.BREAK -> state.breakMinutes
-                Mode.LONG_BREAK -> state.longBreakMinutes
             }
 
         companion object {

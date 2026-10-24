@@ -8,48 +8,30 @@ object LumePalette {
     const val SURFACE = 0xFFF5F4F1.toInt()
     const val FG = 0xFF1C1B19.toInt()
     const val MUTED = 0xFF6D6962.toInt()
+    const val FAINT = 0xFF9A958C.toInt()
     const val BORDER = 0xFFE7E4DE.toInt()
     const val DANGER = 0xFF9A4036.toInt()
     const val WHITE = 0xFFFFFFFF.toInt()
+    const val RING = 0x141C1B19
+    const val SHADOW = 0x0A1C1B19
+    const val DIVIDER = 0x1A1C1B19
 
     const val WORK_ACCENT = 0xFF2F6DF6.toInt()
-    const val WORK_TEXT = 0xFF2558CC.toInt()
     const val WORK_SOFT = 0xFFE8F0FF.toInt()
 
     const val BREAK_ACCENT = 0xFFEF6C1C.toInt()
-    const val BREAK_GRAPHIC = 0xFFE5631A.toInt()
-    const val BREAK_TEXT = 0xFFC2410C.toInt()
     const val BREAK_SOFT = 0xFFFFF1E6.toInt()
 
-    const val LONG_ACCENT = 0xFF3E584A.toInt()
-    const val LONG_SOFT = 0xFFE9F0EC.toInt()
-
-    fun graphic(mode: Mode): Int =
+    fun accent(mode: Mode): Int =
         when (mode) {
             Mode.WORK -> WORK_ACCENT
-            Mode.BREAK -> BREAK_GRAPHIC
-            Mode.LONG_BREAK -> LONG_ACCENT
-        }
-
-    fun text(mode: Mode): Int =
-        when (mode) {
-            Mode.WORK -> WORK_TEXT
-            Mode.BREAK -> BREAK_TEXT
-            Mode.LONG_BREAK -> LONG_ACCENT
-        }
-
-    fun button(mode: Mode): Int =
-        when (mode) {
-            Mode.WORK -> WORK_ACCENT
-            Mode.BREAK -> BREAK_TEXT
-            Mode.LONG_BREAK -> LONG_ACCENT
+            Mode.BREAK -> BREAK_ACCENT
         }
 
     fun soft(mode: Mode): Int =
         when (mode) {
             Mode.WORK -> WORK_SOFT
             Mode.BREAK -> BREAK_SOFT
-            Mode.LONG_BREAK -> LONG_SOFT
         }
 
     fun runningBackground(mode: Mode): Int = mixSrgb(soft(mode), WHITE, 0.70f)
