@@ -10,7 +10,6 @@ import com.marcopt74.damelume.data.db.LumeDatabase
 import com.marcopt74.damelume.data.prefs.LumePreferencesDataSource
 import com.marcopt74.damelume.domain.model.Mode
 import com.marcopt74.damelume.domain.model.TimerState
-import com.marcopt74.damelume.testutil.FakeForeground
 import com.marcopt74.damelume.testutil.FakeLocaleApplicator
 import com.marcopt74.damelume.testutil.MutableClock
 import com.marcopt74.damelume.testutil.RecordingAlarmScheduler
@@ -55,7 +54,8 @@ class TimerAlarmReceiverTest {
 
             val timer = preferences.current().timer
             assertThat(timer.mode).isEqualTo(Mode.BREAK)
-            assertThat(timer.isRunning).isFalse()
+            assertThat(timer.isRunning).isTrue()
+            assertThat(timer.endsAtEpochMs).isEqualTo(endsAt + 5 * 60_000L)
             assertThat(database.completedSessionDao().countAll()).isEqualTo(1)
         }
 
@@ -79,7 +79,7 @@ class TimerAlarmReceiverTest {
 
             val timer = preferences.current().timer
             assertThat(timer.mode).isEqualTo(Mode.BREAK)
-            assertThat(timer.isRunning).isFalse()
+            assertThat(timer.isRunning).isTrue()
         }
 
     private fun preferences(name: String): LumePreferencesDataSource {
@@ -98,7 +98,6 @@ class TimerAlarmReceiverTest {
         alarmScheduler = RecordingAlarmScheduler(),
         notifier = RecordingNotifier(),
         chimePlayer = RecordingChime(),
-        foregroundTracker = FakeForeground(foreground = false),
         localeApplicator = FakeLocaleApplicator(),
     )
 }

@@ -58,6 +58,7 @@ class AndroidTimerNotifier
                     .setContentText(context.getString(bodyForNext(next), nextMinutes))
                     .setContentIntent(contentIntent())
                     .setAutoCancel(true)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                     .setCategory(NotificationCompat.CATEGORY_ALARM)
                     .build()

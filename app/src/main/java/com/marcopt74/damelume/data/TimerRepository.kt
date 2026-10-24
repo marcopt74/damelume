@@ -18,7 +18,6 @@ import com.marcopt74.damelume.system.alarm.AlarmScheduler
 import com.marcopt74.damelume.system.locale.LocaleApplicator
 import com.marcopt74.damelume.system.notify.TimerNotifier
 import com.marcopt74.damelume.system.sound.ChimePlayer
-import com.marcopt74.damelume.system.sound.ForegroundTracker
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -39,7 +38,6 @@ class TimerRepository
         private val alarmScheduler: AlarmScheduler,
         private val notifier: TimerNotifier,
         private val chimePlayer: ChimePlayer,
-        private val foregroundTracker: ForegroundTracker,
         private val localeApplicator: LocaleApplicator,
     ) {
         private val mutex = Mutex()
@@ -129,16 +127,13 @@ class TimerRepository
             }
             val session = result.session ?: return
             dao.insert(session.toEntity())
-            if (foregroundTracker.isInForeground()) {
-                if (result.playChime) chimePlayer.play()
-            } else {
-                notifier.showCompletion(
-                    finished = session.mode,
-                    next = result.state.mode,
-                    nextMinutes = minutesOf(result.state),
-                    soundEnabled = result.playChime,
-                )
-            }
+            if (result.playChime) chimePlayer.play()
+            notifier.showCompletion(
+                finished = session.mode,
+                next = result.state.mode,
+                nextMinutes = minutesOf(result.state),
+                soundEnabled = false,
+            )
         }
 
         private fun minutesOf(state: TimerState): Int =

@@ -10,7 +10,6 @@ import com.marcopt74.damelume.data.db.LumeDatabase
 import com.marcopt74.damelume.data.prefs.LumePreferencesDataSource
 import com.marcopt74.damelume.domain.model.Mode
 import com.marcopt74.damelume.domain.model.TimerState
-import com.marcopt74.damelume.testutil.FakeForeground
 import com.marcopt74.damelume.testutil.FakeLocaleApplicator
 import com.marcopt74.damelume.testutil.MutableClock
 import com.marcopt74.damelume.testutil.RecordingAlarmScheduler
@@ -91,7 +90,6 @@ class NotificationActionReceiverTest {
             alarmScheduler = alarm,
             notifier = notifier,
             chimePlayer = RecordingChime(),
-            foregroundTracker = FakeForeground(foreground = true),
             localeApplicator = FakeLocaleApplicator(),
         )
 }

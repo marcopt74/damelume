@@ -30,14 +30,14 @@ class TimerNotifierTest {
         val withSound = notification(AndroidTimerNotifier.COMPLETE_ID)
         assertThat(withSound.channelId).isEqualTo(NotificationChannels.SESSION_COMPLETE)
         assertThat(withSound.extras.getString(Notification.EXTRA_TITLE)).isEqualTo("Work session over")
-        assertThat(withSound.extras.getString(Notification.EXTRA_TEXT)).isEqualTo("Time for a break · 5 min")
+        assertThat(withSound.extras.getString(Notification.EXTRA_TEXT)).isEqualTo("Break started · 5 min")
         assertThat(withSound.flags and Notification.FLAG_AUTO_CANCEL).isNotEqualTo(0)
 
         notifier.showCompletion(Mode.BREAK, Mode.WORK, nextMinutes = 25, soundEnabled = false)
         val silent = notification(AndroidTimerNotifier.COMPLETE_ID)
         assertThat(silent.channelId).isEqualTo(NotificationChannels.SESSION_COMPLETE_SILENT)
         assertThat(silent.extras.getString(Notification.EXTRA_TITLE)).isEqualTo("Break over")
-        assertThat(silent.extras.getString(Notification.EXTRA_TEXT)).isEqualTo("Ready to work · 25 min")
+        assertThat(silent.extras.getString(Notification.EXTRA_TEXT)).isEqualTo("Work started · 25 min")
     }
 
     @Test

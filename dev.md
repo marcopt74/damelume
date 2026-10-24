@@ -69,8 +69,9 @@ Fonts: Fraunces and Outfit under `app/src/main/res/font/`. SIL OFL texts are in 
 - The screen matches https://da-melume.grok.me: one accent per mode (`#2F6DF6` work, `#EF6C1C` break), Outfit for UI text, Fraunces only for the word Lume, Lucide stroke icons, and a single column. White on `#EF6C1C` is the site button and is below WCAG AA.
 - There is no long break. Work and break alternate. The four dots follow today's completed work count. A stored `long_break` value reloads as work and keeps its remaining time and alarm so the pending intent can still be cancelled or completed.
 - `local_date` is the local date of `endedAt` (the scheduled end), so a work session that ends before midnight stays on that day even if the process reconciles after midnight. The daily counter therefore follows AC-11/AC-28 rather than counting that session on the new day.
-- The next phase never auto-starts.
+- A timely completion starts the next phase immediately and posts a notice. A completion 120 seconds or more after the scheduled end stays stopped and does not chime.
 - First launch is Portuguese, matching the reference site. The in-app toggle still persists EN or PT.
+- The completion chime plays through the alarm stream whenever sound is on, including when the app is in the background. The background notice itself stays silent so the chime is not played twice.
 - Receiver unit tests drive `TimerAlarmHandler`, `NotificationActionHandler` and `BootHandler` (the code the receivers call) instead of a Hilt-injected `BroadcastReceiver`, so they run on the JVM without `@HiltAndroidTest`.
 - `TimerViewModelTest.remainingDerivedFromEndsAt` asserts `TimerUiState.from`, which is the mapping the ViewModel's `combine` uses.
 - `android.newDsl=false` and `android.builtInKotlin=false` keep the classic Android Gradle DSL so ktlint, detekt and Hilt keep working on AGP 9. Both flags are removed in AGP 10.

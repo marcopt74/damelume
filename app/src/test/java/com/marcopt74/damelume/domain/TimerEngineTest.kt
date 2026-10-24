@@ -3,6 +3,7 @@ package com.marcopt74.damelume.domain
 import com.google.common.truth.Truth.assertThat
 import com.marcopt74.damelume.domain.model.AlarmCommand
 import com.marcopt74.damelume.domain.model.Mode
+import com.marcopt74.damelume.domain.model.OngoingCommand
 import com.marcopt74.damelume.domain.model.TimerAction
 import com.marcopt74.damelume.domain.model.TimerState
 import org.junit.Test
@@ -59,8 +60,11 @@ class TimerEngineTest {
                 now = 1_000,
             )
         assertThat(result.state.mode).isEqualTo(Mode.BREAK)
-        assertThat(result.state.isRunning).isFalse()
+        assertThat(result.state.isRunning).isTrue()
         assertThat(result.state.remainingMs).isEqualTo(5 * 60_000L)
+        assertThat(result.state.endsAtEpochMs).isEqualTo(1_000 + 5 * 60_000L)
+        assertThat(result.alarm).isEqualTo(AlarmCommand.Schedule(1_000 + 5 * 60_000L))
+        assertThat(result.ongoing).isEqualTo(OngoingCommand.Update)
         assertThat(result.session!!.mode).isEqualTo(Mode.WORK)
         assertThat(result.playChime).isTrue()
     }
@@ -79,7 +83,8 @@ class TimerEngineTest {
                 now = 2_000,
             )
         assertThat(result.state.mode).isEqualTo(Mode.WORK)
-        assertThat(result.state.isRunning).isFalse()
+        assertThat(result.state.isRunning).isTrue()
+        assertThat(result.state.endsAtEpochMs).isEqualTo(2_000 + 25 * 60_000L)
         assertThat(result.session!!.mode).isEqualTo(Mode.BREAK)
     }
 
@@ -168,7 +173,9 @@ class TimerEngineTest {
         assertThat(result.session!!.lateCompletion).isFalse()
         assertThat(result.session!!.endedAtEpochMs).isEqualTo(endsAt)
         assertThat(result.state.mode).isEqualTo(Mode.BREAK)
-        assertThat(result.state.isRunning).isFalse()
+        assertThat(result.state.isRunning).isTrue()
+        assertThat(result.state.endsAtEpochMs).isEqualTo(endsAt + 30_000 + 5 * 60_000L)
+        assertThat(result.alarm).isEqualTo(AlarmCommand.Schedule(endsAt + 30_000 + 5 * 60_000L))
     }
 
     @Test
@@ -184,6 +191,8 @@ class TimerEngineTest {
         assertThat(result.playChime).isFalse()
         assertThat(result.session!!.lateCompletion).isTrue()
         assertThat(result.session!!.endedAtEpochMs).isEqualTo(endsAt)
+        assertThat(result.state.isRunning).isFalse()
+        assertThat(result.alarm).isEqualTo(AlarmCommand.Cancel)
     }
 
     @Test
@@ -211,7 +220,7 @@ class TimerEngineTest {
                 now = 5_000,
             )
         assertThat(result.state.mode).isEqualTo(Mode.BREAK)
-        assertThat(result.state.isRunning).isFalse()
+        assertThat(result.state.isRunning).isTrue()
         assertThat(result.state.remainingMs).isEqualTo(5 * 60_000L)
         assertThat(result.session!!.mode).isEqualTo(Mode.WORK)
     }

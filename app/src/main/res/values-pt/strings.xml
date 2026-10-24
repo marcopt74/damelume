@@ -32,8 +32,8 @@
 
     <string name="notif_work_done_title">Trabalho concluído</string>
     <string name="notif_break_done_title">Pausa concluída</string>
-    <string name="notif_break_next">Hora da pausa · %1$d min</string>
-    <string name="notif_work_next">Pronto para trabalhar · %1$d min</string>
+    <string name="notif_break_next">Pausa iniciada · %1$d min</string>
+    <string name="notif_work_next">Trabalho iniciado · %1$d min</string>
     <string name="channel_timer_running">Timer em curso</string>
     <string name="channel_session_complete">Fim de sessão</string>
     <string name="channel_session_complete_silent">Fim de sessão (silencioso)</string>

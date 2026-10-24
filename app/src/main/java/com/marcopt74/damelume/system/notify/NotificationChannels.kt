@@ -10,7 +10,7 @@ import com.marcopt74.damelume.R
 object NotificationChannels {
     const val TIMER_RUNNING = "timer_running"
     const val SESSION_COMPLETE = "session_complete"
-    const val SESSION_COMPLETE_SILENT = "session_complete_silent"
+    const val SESSION_COMPLETE_SILENT = "session_complete_notice"
 
     fun create(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -48,7 +48,7 @@ object NotificationChannels {
             NotificationChannel(
                 SESSION_COMPLETE_SILENT,
                 context.getString(R.string.channel_session_complete_silent),
-                NotificationManager.IMPORTANCE_DEFAULT,
+                NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = context.getString(R.string.channel_session_complete_silent)
                 setSound(null, null)

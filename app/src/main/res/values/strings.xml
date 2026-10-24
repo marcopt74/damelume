@@ -32,8 +32,8 @@
 
     <string name="notif_work_done_title">Work session over</string>
     <string name="notif_break_done_title">Break over</string>
-    <string name="notif_break_next">Time for a break · %1$d min</string>
-    <string name="notif_work_next">Ready to work · %1$d min</string>
+    <string name="notif_break_next">Break started · %1$d min</string>
+    <string name="notif_work_next">Work started · %1$d min</string>
     <string name="channel_timer_running">Timer running</string>
     <string name="channel_session_complete">Session over</string>
     <string name="channel_session_complete_silent">Session over (silent)</string>

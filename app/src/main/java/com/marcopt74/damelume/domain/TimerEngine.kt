@@ -149,12 +149,14 @@ object TimerEngine {
         val late = nowMs - endedAt >= SOUND_WINDOW_MS
         val finished = state.mode
         val nextMode = if (finished == Mode.WORK) Mode.BREAK else Mode.WORK
+        val nextDuration = minutesOf(state, nextMode) * 60_000L
+        val nextEndsAt = if (late) null else nowMs + nextDuration
         val next =
             state.copy(
                 mode = nextMode,
-                isRunning = false,
-                endsAtEpochMs = null,
-                remainingMs = minutesOf(state, nextMode) * 60_000L,
+                isRunning = nextEndsAt != null,
+                endsAtEpochMs = nextEndsAt,
+                remainingMs = nextDuration,
             )
         return EngineResult(
             state = next,
@@ -166,9 +168,9 @@ object TimerEngine {
                     localDate = localDate(endedAt, zone),
                     lateCompletion = late,
                 ),
-            playChime = soundEnabled && !late,
-            alarm = AlarmCommand.Cancel,
-            ongoing = OngoingCommand.Cancel,
+            playChime = soundEnabled && nextEndsAt != null,
+            alarm = if (nextEndsAt != null) AlarmCommand.Schedule(nextEndsAt) else AlarmCommand.Cancel,
+            ongoing = if (nextEndsAt != null) OngoingCommand.Update else OngoingCommand.Cancel,
         )
     }
 

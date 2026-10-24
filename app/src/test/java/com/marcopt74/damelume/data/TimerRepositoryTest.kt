@@ -11,7 +11,6 @@ import com.marcopt74.damelume.data.prefs.LumePreferencesDataSource
 import com.marcopt74.damelume.domain.model.Mode
 import com.marcopt74.damelume.domain.model.TimerAction
 import com.marcopt74.damelume.domain.model.TimerState
-import com.marcopt74.damelume.testutil.FakeForeground
 import com.marcopt74.damelume.testutil.FakeLocaleApplicator
 import com.marcopt74.damelume.testutil.MutableClock
 import com.marcopt74.damelume.testutil.RecordingAlarmScheduler
@@ -34,7 +33,6 @@ class TimerRepositoryTest {
     private lateinit var alarm: RecordingAlarmScheduler
     private lateinit var notifier: RecordingNotifier
     private lateinit var chime: RecordingChime
-    private lateinit var foreground: FakeForeground
     private lateinit var repository: TimerRepository
 
     @Before
@@ -51,7 +49,6 @@ class TimerRepositoryTest {
         alarm = RecordingAlarmScheduler()
         notifier = RecordingNotifier()
         chime = RecordingChime()
-        foreground = FakeForeground(foreground = true)
         repository = repository()
     }
 
@@ -88,12 +85,37 @@ class TimerRepositoryTest {
             repository.dispatch(TimerAction.Start)
             val endsAt = preferences.current().timer.endsAtEpochMs!!
             clock.now = endsAt
-            foreground.foreground = true
 
             repository.dispatch(TimerAction.Complete(expectedEndsAt = endsAt))
 
             assertThat(chime.plays).isEqualTo(1)
-            assertThat(notifier.completions).isEmpty()
+            assertThat(notifier.completions).hasSize(1)
+            assertThat(preferences.current().timer.isRunning).isTrue()
+            assertThat(preferences.current().timer.mode).isEqualTo(Mode.BREAK)
+
+            preferences.setSoundEnabled(false)
+            val secondEnds = preferences.current().timer.endsAtEpochMs!!
+            clock.now = secondEnds
+            repository.dispatch(TimerAction.Complete(expectedEndsAt = secondEnds))
+
+            assertThat(chime.plays).isEqualTo(1)
+            assertThat(notifier.completions).hasSize(2)
+            assertThat(preferences.current().timer.mode).isEqualTo(Mode.WORK)
+            assertThat(preferences.current().timer.isRunning).isTrue()
+        }
+
+    @Test
+    fun completeInBackground_playsChimeAndShowsSilentNotice() =
+        runTest {
+            repository.dispatch(TimerAction.Start)
+            val endsAt = preferences.current().timer.endsAtEpochMs!!
+            clock.now = endsAt
+
+            repository.dispatch(TimerAction.Complete(expectedEndsAt = endsAt))
+
+            assertThat(chime.plays).isEqualTo(1)
+            assertThat(notifier.completions).hasSize(1)
+            assertThat(notifier.completions.single().soundEnabled).isFalse()
 
             preferences.setSoundEnabled(false)
             repository.dispatch(TimerAction.Start)
@@ -102,7 +124,8 @@ class TimerRepositoryTest {
             repository.dispatch(TimerAction.Complete(expectedEndsAt = secondEnds))
 
             assertThat(chime.plays).isEqualTo(1)
-            assertThat(notifier.completions).isEmpty()
+            assertThat(notifier.completions).hasSize(2)
+            assertThat(notifier.completions.last().soundEnabled).isFalse()
         }
 
     @Test
@@ -155,7 +178,6 @@ class TimerRepositoryTest {
             alarmScheduler = alarm,
             notifier = notifier,
             chimePlayer = chime,
-            foregroundTracker = foreground,
             localeApplicator = FakeLocaleApplicator(),
         )
 }
